@@ -1,0 +1,14 @@
+{
+  "archimateId": "model-001",
+  "elements": [
+    {"id": "e1", "name": "OrderService", "type": "ApplicationService"},
+    {"id": "e2", "name": "OrderDB",      "type": "DataObject"},
+    {"id": "e3", "name": "Clerk",        "type": "BusinessRole"},
+    {"id": "e4", "name": "PlaceOrder",   "type": "BusinessProcess"}
+  ],
+  "relationships": [
+    {"id": "r1", "type": "Serving",      "sourceId": "e1", "targetId": "e3"},
+    {"id": "r2", "type": "Access",       "sourceId": "e1", "targetId": "e2"},
+    {"id": "r3", "type": "Assignment",   "sourceId": "e3", "targetId": "e4"}
+  ]
+}

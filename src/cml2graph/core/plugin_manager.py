@@ -99,7 +99,7 @@ class PluginManager:
 
     @property
     def available(self) -> list[str]:
-        return sorted(self._plugins)
+        return sorted(list(self._plugins.keys()))
 
     # Helpers
     @staticmethod

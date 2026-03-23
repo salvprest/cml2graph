@@ -4,6 +4,9 @@ from typing import Any
 import networkx as nx
 
 from .utils.types import RELATION_STEREOTYPES
+_RELATION_STEREOTYPES_LOWER: frozenset[str] = frozenset(
+    s.lower() for s in RELATION_STEREOTYPES
+)
 
 class OntoUMLJsonRenderer:
 
@@ -38,7 +41,7 @@ class OntoUMLJsonRenderer:
         for u, v, k, d in graph.edges(keys=True, data=True):
             etype = d.get("type", "")
 
-            if etype == "generalization":
+            if etype.lower() == "generalization":
                 gen: dict[str, Any] = {
                     "type": "Generalization",
                     "id": d.get("id", k),
@@ -85,7 +88,7 @@ class OntoUMLJsonRenderer:
             # Reconstruct from edge attributes (list-based)
             gs_groups: dict[str, dict[str, Any]] = {}
             for u, v, k, d in graph.edges(keys=True, data=True):
-                if d.get("type") != "generalization":
+                if d.get("type", "").lower() != "generalization":
                     continue
                 genset_ids = d.get("genset_ids", [])
                 genset_names = d.get("genset_names", [])
@@ -147,8 +150,9 @@ class OntoUMLPlantUMLRenderer:
             src = _safe_alias(u)
             tgt = _safe_alias(v)
             etype = d.get("type", "")
+            etype_lower = etype.lower()
 
-            if etype == "generalization":
+            if etype_lower == "generalization":
                 meta = _gen_meta_from_lists(
                     d.get("genset_names", []),
                     d.get("genset_is_disjoint", []),
@@ -156,7 +160,7 @@ class OntoUMLPlantUMLRenderer:
                 )
                 lines.append(f"{tgt} <|-- {src}: Generalization{meta}")
 
-            elif etype in RELATION_STEREOTYPES or etype == "relation":
+            elif etype_lower in _RELATION_STEREOTYPES_LOWER:
                 card_src = d.get("cardinality_source", "")
                 card_tgt = d.get("cardinality_target", "")
                 left_q = f'"{card_src}" ' if card_src else ""
@@ -165,7 +169,7 @@ class OntoUMLPlantUMLRenderer:
                     f'{src} {left_q}-->{right_q} {tgt}: <<{etype}>>'
                 )
 
-            elif etype == "restrictedTo":
+            elif etype_lower == "restrictedto":
                 lines.append(
                     f'{src} .[#blue,dotted,thickness=2]. {tgt}: restrictedTo'
                 )

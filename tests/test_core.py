@@ -89,3 +89,10 @@ def test_discover_archimate(tmp_path):
     pm.discover("cml2graph.plugins")
     plugin = pm.get("archimate")
     assert plugin.name == "archimate"
+
+def test_discover_ontouml(tmp_path):
+    """discover() can locate the built-in archimate plugin package."""
+    pm = PluginManager()
+    pm.discover("cml2graph.plugins")
+    plugin = pm.get("ontouml")
+    assert plugin.name == "ontouml"

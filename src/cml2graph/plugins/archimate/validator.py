@@ -20,15 +20,15 @@ class Issue:
 
 def validate_model(data: dict[str, Any]) -> list[Issue]:
     """
-    Return a list of Issues found in *data*.
+    Return a list of Issues found in data.
 
-    Rules
+    Rules:
     -----
-    * ``elements`` and ``relationships`` keys must exist.
-    * Every element must carry ``id`` and ``type``.
-    * Every relationship must carry ``id``, ``type``, ``sourceId``, ``targetId``.
-    * ``sourceId`` / ``targetId`` must reference an existing element.
-    * Unknown types produce warnings, not errors.
+    - "elements" and "relationships" keys must exist.
+    - Every element must carry "id" and "type".
+    - Every relationship must carry "id", "type", "sourceId", "targetId".
+    - "sourceId" / "targetId" must reference an existing element.
+    - Unknown types produce warnings, not errors.
     """
     issues: list[Issue] = []
 

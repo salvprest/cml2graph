@@ -27,6 +27,9 @@ class _MinimalPlugin:
     def get_filters(self):
         return {}
 
+    def is_valid(self, data):
+        return True
+
     def render(self, graph: nx.MultiDiGraph, fmt_name=None) -> str:
         return ""
 

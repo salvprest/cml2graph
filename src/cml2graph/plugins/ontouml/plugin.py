@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from typing import Any
 import networkx as nx
 
 from cml2graph.core.formats import GSpanFormat
@@ -17,6 +18,7 @@ from .filters import (
     normalize_types,
 )
 from .renderer import OntoUMLJsonRenderer, OntoUMLPlantUMLRenderer
+from .validator import validate_model, Issue
 
 
 class OntoUMLPlugin:
@@ -51,6 +53,17 @@ class OntoUMLPlugin:
             "exclude_edge_types": exclude_edge_types,
             "normalize_types": normalize_types,
         }
+
+    def is_valid(self, data: dict[str, Any]) -> bool:
+        """
+        Check if data represents a valid OntoUML model.
+        """
+        if not isinstance(data, dict):
+            return False
+
+        issues = validate_model(data)
+        errors = [i for i in issues if i.severity == "error"]
+        return len(errors) == 0
 
     def render(self, graph: nx.MultiDiGraph, fmt_name: str | None = None) -> str:
         renderers = self.get_renderers()

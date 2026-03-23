@@ -1,4 +1,4 @@
-from typing import TypedDict, Protocol, runtime_checkable
+from typing import Any, TypedDict, Protocol, runtime_checkable
 from collections.abc import Callable
 import networkx as nx
 
@@ -59,6 +59,10 @@ class LanguagePlugin(Protocol):
 
     def get_filters(self) -> dict[str, Callable]:
         """Return language specific filter functions."""
+        ...
+
+    def is_valid(self, data: dict[str, Any]) -> bool:
+        """Check if data is a valid model in this language."""
         ...
 
     def render(self, graph: nx.MultiDiGraph, fmt_name: str | None = None) -> str:

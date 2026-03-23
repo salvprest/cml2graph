@@ -1,10 +1,12 @@
 from collections.abc import Callable
 
+from typing import Any
 import networkx as nx
 
 from .parser import parse as _parse
 from .filters import get_filters as _get_filters
 from .renderer import ArchiMatePlantUMLRenderer
+from .validator import validate_model, Issue
 
 from cml2graph.core.formats.gspan_fmt import GSpanFormat
 from cml2graph.core.language_schema import Renderer
@@ -27,6 +29,17 @@ class ArchiMatePlugin:
 
     def get_filters(self) -> dict[str, Callable]:
         return _get_filters()
+
+    def is_valid(self, data: dict[str, Any]) -> bool:
+        """
+        Check if data represents a valid ArchiMate model.
+        """
+        if not isinstance(data, dict):
+            return False
+
+        issues = validate_model(data)
+        errors = [i for i in issues if i.severity == "error"]
+        return len(errors) == 0
 
     def render(self, graph: nx.MultiDiGraph, fmt_name: str | None = None) -> str:
         renderers = self.get_renderers()

@@ -9,7 +9,7 @@ from cml2graph.core.language_schema import GraphEdge, GraphNode
 from .utils.types import ELEMENT_LAYER
 from .validator import validate_model
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def parse(source: str) -> nx.MultiDiGraph:
@@ -37,7 +37,7 @@ def parse(source: str) -> nx.MultiDiGraph:
     # validate
     issues = validate_model(data)
     for issue in issues:
-        (log.warning if issue.severity == "warning" else log.error)(
+        (logger.warning if issue.severity == "warning" else logger.error)(
             "%s", issue
         )
     errors = [i for i in issues if i.severity == "error"]

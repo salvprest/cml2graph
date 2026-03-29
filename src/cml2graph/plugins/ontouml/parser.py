@@ -15,12 +15,7 @@ from .utils.types import (
 logger = logging.getLogger(__name__)
 
 def parse(source: str) -> nx.MultiDiGraph:
-    """
-    Parse an OntoUML JSON file into a canonical nx.MultiDiGraph.
-    Parameters
-
-    source : Path to a JSON file.
-    """
+    """Parse an OntoUML JSON file into a canonical nx.MultiDiGraph."""
     path = Path(source)
     raw = json.loads(path.read_text(encoding="utf-8"))
 
@@ -127,7 +122,6 @@ def _build_graph( data: dict[str, Any], model_id: str, issues: list[Issue]) -> n
     # process generalization sets
 
     # Map each generalization ID to its parent GeneralizationSet.
-    # Also store full genset metadata at graph level for JSON round-trip.
     genset_index: dict[str, list[dict]] = {}
     gs_graph_meta: list[dict] = []
 

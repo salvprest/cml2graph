@@ -2,33 +2,24 @@ from collections.abc import Iterable
 
 import networkx as nx
 
-def by_stereotype(
-    graph: nx.MultiDiGraph,
-    stereotypes: str | Iterable[str],
-) -> nx.MultiDiGraph:
-    """Keep only nodes whose ``stereotype`` is in *stereotypes*."""
+def by_stereotype(graph: nx.MultiDiGraph, stereotypes: str | Iterable[str]) -> nx.MultiDiGraph:
+    """Keep only nodes whose stereotype is in selected stereotypes."""
     keep = _as_set(stereotypes)
     nodes = [n for n, d in graph.nodes(data=True)
              if d.get("stereotype") in keep]
     return graph.subgraph(nodes).copy()
 
 
-def by_category(
-    graph: nx.MultiDiGraph,
-    categories: str | Iterable[str],
-) -> nx.MultiDiGraph:
-    """Keep only nodes whose ``category`` is in *categories*."""
+def by_category(graph: nx.MultiDiGraph, categories: str | Iterable[str]) -> nx.MultiDiGraph:
+    """Keep only nodes whose category is in selected categories."""
     keep = _as_set(categories)
     nodes = [n for n, d in graph.nodes(data=True)
              if d.get("category") in keep]
     return graph.subgraph(nodes).copy()
 
 
-def by_relationship_type(
-    graph: nx.MultiDiGraph,
-    types: str | Iterable[str],
-) -> nx.MultiDiGraph:
-    """Keep all nodes, remove edges whose ``type`` is not in *types*."""
+def by_relationship_type(graph: nx.MultiDiGraph, types: str | Iterable[str]) -> nx.MultiDiGraph:
+    """Keep all nodes, remove edges whose type is not in selected types."""
     keep = _as_set(types)
     H = graph.copy()
     to_remove = [
@@ -40,17 +31,8 @@ def by_relationship_type(
     return H
 
 
-def by_nature(
-    graph: nx.MultiDiGraph,
-    natures: str | Iterable[str],
-) -> nx.MultiDiGraph:
-    """
-    Keep only nodes whose ``nature`` contains at least one of the
-    requested values.
-
-    FIX: empty-string entries produced by ``"".split(",")`` are now
-    filtered out so that a node with ``nature=""`` never matches.
-    """
+def by_nature(graph: nx.MultiDiGraph, natures: str | Iterable[str]) -> nx.MultiDiGraph:
+    """Keep only nodes whose nature contains at least one of the requested values."""
     keep = _as_set(natures)
     nodes = [
         n
@@ -66,22 +48,16 @@ def without_orphans(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
     return graph.subgraph(nodes).copy()
 
 
-def exclude_node_types(
-    graph: nx.MultiDiGraph,
-    types: Iterable[str],
-) -> nx.MultiDiGraph:
-    """Remove nodes whose ``type`` matches any in *types*."""
+def exclude_node_types(graph: nx.MultiDiGraph, types: Iterable[str]) -> nx.MultiDiGraph:
+    """Remove nodes whose type matches any of the selected types."""
     remove = _as_set(types)
     nodes = [n for n, d in graph.nodes(data=True)
              if d.get("type") not in remove]
     return graph.subgraph(nodes).copy()
 
 
-def exclude_edge_types(
-    graph: nx.MultiDiGraph,
-    types: Iterable[str],
-) -> nx.MultiDiGraph:
-    """Remove edges whose ``type`` matches any in *types*."""
+def exclude_edge_types(graph: nx.MultiDiGraph, types: Iterable[str]) -> nx.MultiDiGraph:
+    """Remove edges whose type matches any of the selected types."""
     remove = _as_set(types)
     H = graph.copy()
     to_remove = [
@@ -102,15 +78,14 @@ def normalize_types(
 ) -> nx.MultiDiGraph:
     """
     Replace node/edge types with generic labels for abstracted mining.
+    Mirrors the old code replace_labels_with_default function.
 
-    Mirrors the old ``replace_labels_with_default`` function.
+    - Every node whose type is in "class_stereotypes" gets its
+      type and label set to "class_replacement".
+    - Every edge whose type is in "relation_stereotypes" gets its
+      type and label set to "relation_replacement".
 
-    * Every node whose ``type`` is in *class_stereotypes* gets its
-      ``type`` and ``label`` set to *class_replacement*.
-    * Every edge whose ``type`` is in *relation_stereotypes* gets its
-      ``type`` and ``label`` set to *relation_replacement*.
-
-    If the stereotype sets are ``None`` the built-in OntoUML sets are used.
+    If the stereotype sets are None the built-in OntoUML sets are used.
     """
     from .utils.types import CLASS_STEREOTYPES, RELATION_STEREOTYPES as _RS
 
@@ -118,7 +93,6 @@ def normalize_types(
     rel_set = set(relation_stereotypes) if relation_stereotypes else set(_RS)
 
     H = graph.copy()
-
     for n, d in H.nodes(data=True):
         if d.get("type") in cls_set:
             d["type"] = class_replacement

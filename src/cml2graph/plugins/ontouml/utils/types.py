@@ -46,7 +46,7 @@ NATURE_TYPES: frozenset[str] = frozenset({
     "event", "situation", "type",
 })
 
-# ── Stereotype → semantic category ───────────────────────────────
+# ── Stereotype to semantic category ───────────────────────────────
 
 STEREOTYPE_CATEGORY: dict[str, str] = {
     "kind": "Substantial", "subkind": "Substantial",
@@ -68,7 +68,7 @@ RELATIONSHIP_TYPES: frozenset[str] = RELATION_STEREOTYPES | frozenset({
 })
 
 # ── Synonym normalisation ────────────────────────────────────────
-# Maps informal association *names* to canonical OntoUML stereotypes.
+# Maps informal association names to canonical OntoUML stereotypes.
 
 ASSOCIATION_NAME_SYNONYMS: dict[str, str] = {
     "involves":                       "mediation",

@@ -7,6 +7,7 @@ from cml2graph.core.formats import GSpanFormat
 from cml2graph.core.language_schema import Renderer
 
 from .parser import parse as _parse
+from . import prompts as _prompts
 from .filters import (
     by_stereotype,
     by_category,
@@ -39,7 +40,6 @@ class OntoUMLPlugin:
         return "ontouml"
 
     def parse(self, source: str) -> nx.MultiDiGraph:
-        """Parse an OntoUML JSON file into a canonical MultiDiGraph."""
         return _parse(source)
 
     def get_filters(self) -> dict[str, Callable]:
@@ -55,9 +55,7 @@ class OntoUMLPlugin:
         }
 
     def is_valid(self, data: dict[str, Any]) -> bool:
-        """
-        Check if data represents a valid OntoUML model.
-        """
+        """ Check if data represents a valid OntoUML model."""
         if not isinstance(data, dict):
             return False
 
@@ -78,3 +76,10 @@ class OntoUMLPlugin:
 
     def get_renderers(self) -> dict[str, Renderer]:
         return dict(self._renderers)
+
+    def get_tool_meta(self) -> dict[str, dict]:
+        return _prompts.FILTER_TOOLS
+
+    def get_general_prompt(self, graph: nx.MultiDiGraph) -> str:
+        ctx = _prompts.build_prompt_context(graph)
+        return _prompts.GENERAL_PROMPT.format(**ctx)

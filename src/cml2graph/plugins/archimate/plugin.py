@@ -6,6 +6,7 @@ import networkx as nx
 from .parser import parse as _parse
 from .filters import get_filters as _get_filters
 from .renderer import ArchiMatePlantUMLRenderer
+from . import prompts as _prompts
 from .validator import validate_model, Issue
 
 from cml2graph.core.formats.gspan_fmt import GSpanFormat
@@ -54,3 +55,11 @@ class ArchiMatePlugin:
 
     def get_renderers(self) -> dict[str, Renderer]:
         return dict(self._renderers)
+
+    def get_tool_meta(self) -> dict[str, dict]:
+        """Filter metadata keyed by filter name."""
+        return _prompts.FILTER_TOOLS
+
+    def get_general_prompt(self, graph: nx.MultiDiGraph) -> str:
+        ctx = _prompts.build_prompt_context(graph)
+        return _prompts.GENERAL_PROMPT.format(**ctx)

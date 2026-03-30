@@ -16,6 +16,7 @@ import pytest
 from cml2graph.plugins.ontouml.plugin import OntoUMLPlugin
 from cml2graph.plugins.ontouml.validator import validate_model
 from cml2graph.core.language_schema import LanguagePlugin
+from cml2graph.core.formats.gspan_fmt import GSpanFormat
 
 
 # ── fixtures ─────────────────────────────────────────────────────
@@ -423,3 +424,76 @@ def test_filter_tools_enums_are_non_empty():
                 assert len(param_meta["enum"]) > 0, (
                     f"Filter '{filter_name}', param '{param_name}' has empty enum"
                 )
+
+
+# ── enrich_pattern ────────────────────────────────────────────────────────────
+
+def test_enrich_skeleton_gets_stereotype_and_category():
+    gspan_text = "t # 0\nv 0 kind\nv 1 relator\ne 0 1 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    node_0 = enriched.nodes[0]
+    node_1 = enriched.nodes[1]
+
+    assert node_0["stereotype"] == "kind"
+    assert node_0["category"] == "Substantial"
+    assert node_1["stereotype"] == "relator"
+    assert node_1["category"] == "Moment"
+
+
+def test_enrich_skeleton_unique_labels_no_suffix():
+    gspan_text = "t # 0\nv 0 kind\nv 1 relator\ne 0 1 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["label"] == "kind"
+    assert enriched.nodes[1]["label"] == "relator"
+
+
+def test_enrich_duplicate_types_get_numbered():
+    gspan_text = "t # 0\nv 0 kind\nv 1 kind\ne 0 1 characterization"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    labels = {enriched.nodes[n]["label"] for n in enriched.nodes}
+    assert labels == {"kind_0", "kind_1"}
+
+
+def test_enrich_unknown_type_gets_empty_category():
+    gspan_text = "t # 0\nv 0 UnknownStereotype\ne 0 0 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["category"] == ""
+
+
+def test_enrich_edge_label_set_from_type():
+    gspan_text = "t # 0\nv 0 kind\nv 1 relator\ne 0 1 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    edge_data = next(iter(enriched.edges(data=True)))[2]
+    assert edge_data["label"] == "mediation"
+
+
+def test_enrich_non_skeleton_unchanged():
+    path = _write_model(MINIMAL_MODEL)
+    plugin = OntoUMLPlugin()
+    graph = plugin.parse(path)
+    original_labels = {d["label"] for _, d in graph.nodes(data=True)}
+
+    enriched = plugin.enrich_pattern(graph)
+    new_labels = {d["label"] for _, d in enriched.nodes(data=True)}
+
+    assert original_labels == new_labels

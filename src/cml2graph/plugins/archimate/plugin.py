@@ -8,9 +8,11 @@ from .filters import get_filters as _get_filters
 from .renderer import ArchiMatePlantUMLRenderer
 from . import prompts as _prompts
 from .validator import validate_model, Issue
+from .utils.types import ELEMENT_LAYER
 
 from cml2graph.core.formats.gspan_fmt import GSpanFormat
 from cml2graph.core.language_schema import Renderer
+from cml2graph.core.utils.pattern_enricher import is_graph_skeleton, auto_label_nodes
 
 class ArchiMatePlugin:
     """ArchiMate LanguagePlugin Protocol implementation."""
@@ -63,3 +65,26 @@ class ArchiMatePlugin:
     def get_general_prompt(self, graph: nx.MultiDiGraph) -> str:
         ctx = _prompts.build_prompt_context(graph)
         return _prompts.GENERAL_PROMPT.format(**ctx)
+
+    def enrich_pattern(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+        """Enrich a TVE graph data skeleton with ArchiMate-specific attributes.
+
+        Adds layer and unique display labels so the PlantUML renderer
+        produces correct ArchiMate diagrams.
+        """
+        if not is_graph_skeleton(graph):
+            return graph
+
+        graph = auto_label_nodes(graph)
+
+        for _, data in graph.nodes(data=True):
+            ntype = data.get("type", "")
+            # Add layer if missing — critical for ArchiMate rendering
+            if "layer" not in data:
+                data["layer"] = ELEMENT_LAYER.get(ntype, "Other")
+
+        for _, _, data in graph.edges(data=True):
+            if "label" not in data:
+                data["label"] = data.get("type", "")
+
+        return graph

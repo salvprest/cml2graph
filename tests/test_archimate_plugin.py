@@ -26,6 +26,7 @@ from cml2graph.plugins.archimate.filters import (
 )
 from cml2graph.plugins.archimate.prompts import FILTER_TOOLS
 from cml2graph.core.language_schema import LanguagePlugin
+from cml2graph.core.formats.gspan_fmt import GSpanFormat
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "simple_model.json"
@@ -281,3 +282,62 @@ def test_filter_tools_enums_are_non_empty():
                 assert len(param_meta["enum"]) > 0, (
                     f"Filter '{filter_name}', param '{param_name}' has empty enum"
                 )
+
+
+# ── enrich_pattern ────────────────────────────────────────────────────────────
+
+def test_enrich_skeleton_gets_layer():
+    gspan_text = "t # 0\nv 0 BusinessProcess\nv 1 ApplicationService\ne 0 1 Serving"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    node_0 = enriched.nodes[0]
+    node_1 = enriched.nodes[1]
+
+    assert node_0["layer"] == "Business"
+    assert node_1["layer"] == "Application"
+    assert node_0["label"] == "BusinessProcess"    # unique type → no suffix
+    assert node_1["label"] == "ApplicationService"  # unique type → no suffix
+
+
+def test_enrich_duplicate_types_get_numbered():
+    gspan_text = "t # 0\nv 0 BusinessProcess\nv 1 BusinessProcess\ne 0 1 Triggering"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    labels = {enriched.nodes[n]["label"] for n in enriched.nodes}
+    assert labels == {"BusinessProcess_0", "BusinessProcess_1"}
+
+
+def test_enrich_unknown_type_gets_other_layer():
+    gspan_text = "t # 0\nv 0 UnknownThing\ne 0 0 Association"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["layer"] == "Other"
+
+
+def test_enrich_edge_label_set_from_type():
+    gspan_text = "t # 0\nv 0 BusinessProcess\nv 1 ApplicationService\ne 0 1 Serving"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    edge_data = next(iter(enriched.edges(data=True)))[2]
+    assert edge_data["label"] == "Serving"
+
+
+def test_enrich_non_skeleton_unchanged(plugin, graph):
+    original_labels = {d["label"] for _, d in graph.nodes(data=True)}
+
+    enriched = plugin.enrich_pattern(graph)
+    new_labels = {d["label"] for _, d in enriched.nodes(data=True)}
+
+    assert original_labels == new_labels

@@ -5,9 +5,11 @@ import networkx as nx
 
 from cml2graph.core.formats import GSpanFormat
 from cml2graph.core.language_schema import Renderer
+from cml2graph.core.utils.pattern_enricher import is_graph_skeleton, auto_label_nodes
 
 from .parser import parse as _parse
 from . import prompts as _prompts
+from .utils.types import STEREOTYPE_CATEGORY
 from .filters import (
     by_stereotype,
     by_category,
@@ -83,3 +85,30 @@ class OntoUMLPlugin:
     def get_general_prompt(self, graph: nx.MultiDiGraph) -> str:
         ctx = _prompts.build_prompt_context(graph)
         return _prompts.GENERAL_PROMPT.format(**ctx)
+
+    def enrich_pattern(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+        """Enrich a TVE graph data skeleton with OntoUML-specific attributes.
+
+        Adds stereotype, category, and unique display labels so the
+        PlantUML renderer produces correct output.
+        """
+        if not is_graph_skeleton(graph):
+            return graph
+
+        graph = auto_label_nodes(graph)
+
+        for _, data in graph.nodes(data=True):
+            ntype = data.get("type", "")
+            # Add stereotype if missing
+            if "stereotype" not in data:
+                data["stereotype"] = ntype
+            # Add category if missing
+            if "category" not in data:
+                data["category"] = STEREOTYPE_CATEGORY.get(ntype, "")
+
+        # Normalize edge labels to lowercase for case-insensitive matching
+        for _, _, data in graph.edges(data=True):
+            if "label" not in data:
+                data["label"] = data.get("type", "")
+
+        return graph

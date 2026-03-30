@@ -373,3 +373,53 @@ def test_without_orphans():
     for n in sub:
         assert sub.degree(n) > 0
     Path(path).unlink()
+
+
+# ── prompts metadata ──────────────────────────────────────────────
+
+def test_filter_tools_keys_match_get_filters():
+    """Every key in FILTER_TOOLS must correspond to a real filter function."""
+    from cml2graph.plugins.ontouml.prompts import FILTER_TOOLS
+    filters = OntoUMLPlugin().get_filters()
+    for name in FILTER_TOOLS:
+        assert name in filters, (
+            f"FILTER_TOOLS has '{name}' but get_filters() does not"
+        )
+
+
+def test_filter_tools_param_names_match_signatures():
+    """Param names in FILTER_TOOLS must match the filter function signatures
+    so that **args unpacking works at call time."""
+    import inspect
+    from cml2graph.plugins.ontouml.prompts import FILTER_TOOLS
+    filters = OntoUMLPlugin().get_filters()
+    for filter_name, meta in FILTER_TOOLS.items():
+        sig_params = set(inspect.signature(filters[filter_name]).parameters) - {"graph"}
+        meta_params = set(meta.get("params", {}).keys())
+        assert meta_params <= sig_params, (
+            f"Filter '{filter_name}': metadata params {meta_params} "
+            f"not a subset of signature params {sig_params}"
+        )
+
+
+def test_filter_tools_params_have_type_field():
+    """All params with an enum should carry a 'type' field for schema generation."""
+    from cml2graph.plugins.ontouml.prompts import FILTER_TOOLS
+    for filter_name, meta in FILTER_TOOLS.items():
+        for param_name, param_meta in meta.get("params", {}).items():
+            if "enum" in param_meta:
+                assert "type" in param_meta, (
+                    f"Filter '{filter_name}', param '{param_name}' "
+                    f"has 'enum' but no 'type'"
+                )
+
+
+def test_filter_tools_enums_are_non_empty():
+    """Every enum list in FILTER_TOOLS must be non-empty."""
+    from cml2graph.plugins.ontouml.prompts import FILTER_TOOLS
+    for filter_name, meta in FILTER_TOOLS.items():
+        for param_name, param_meta in meta.get("params", {}).items():
+            if "enum" in param_meta:
+                assert len(param_meta["enum"]) > 0, (
+                    f"Filter '{filter_name}', param '{param_name}' has empty enum"
+                )

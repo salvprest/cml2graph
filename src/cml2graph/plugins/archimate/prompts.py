@@ -22,6 +22,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "layers": {
                 "description": "ArchiMate layers to keep.",
+                "type": "array",
                 "enum": _LAYERS,
             },
         },
@@ -33,8 +34,9 @@ FILTER_TOOLS: dict[str, dict] = {
             "and their incident edges."
         ),
         "params": {
-            "element_types": {
+            "types": {
                 "description": "ArchiMate element types to keep.",
+                "type": "array",
                 "enum": _ELEMENT_TYPES,
             },
         },
@@ -47,6 +49,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "types": {
                 "description": "ArchiMate relationship types to keep.",
+                "type": "array",
                 "enum": _RELATIONSHIP_TYPES,
             },
         },

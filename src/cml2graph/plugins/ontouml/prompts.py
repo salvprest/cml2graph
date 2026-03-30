@@ -31,6 +31,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "stereotypes": {
                 "description": "OntoUML class stereotypes to keep.",
+                "type": "array",
                 "enum": _CLASS_STEREOTYPES,
             },
         },
@@ -45,6 +46,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "categories": {
                 "description": "Semantic categories to keep.",
+                "type": "array",
                 "enum": _CATEGORIES,
             },
         },
@@ -57,6 +59,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "types": {
                 "description": "Relationship types to keep.",
+                "type": "array",
                 "enum": _RELATIONSHIP_TYPES,
             },
         },
@@ -69,6 +72,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "natures": {
                 "description": "Ontological natures to keep.",
+                "type": "array",
                 "enum": _NATURES,
             },
         },
@@ -85,6 +89,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "types": {
                 "description": "Node types (stereotypes) to remove.",
+                "type": "array",
                 "enum": _CLASS_STEREOTYPES,
             },
         },
@@ -94,6 +99,7 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "types": {
                 "description": "Edge types to remove.",
+                "type": "array",
                 "enum": _RELATIONSHIP_TYPES,
             },
         },
@@ -106,11 +112,13 @@ FILTER_TOOLS: dict[str, dict] = {
         "params": {
             "class_stereotypes": {
                 "description": "Class stereotypes to normalise. Defaults to all.",
+                "type": "array",
                 "enum": _CLASS_STEREOTYPES,
                 "required": False,
             },
             "relation_stereotypes": {
                 "description": "Relation stereotypes to normalise. Defaults to all.",
+                "type": "array",
                 "enum": _RELATION_STEREOTYPES,
                 "required": False,
             },

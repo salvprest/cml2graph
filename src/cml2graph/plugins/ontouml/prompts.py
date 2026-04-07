@@ -166,7 +166,6 @@ Structural: generalization, restrictedTo
     2. Which stereotypes are used and their ontological meaning.
     3. Which relationships connect classes; multiplicities if visible.
     4. Generalisation hierarchies and their constraints.
-    5. Overall ontological structure and UFO patterns.
 """
 
 

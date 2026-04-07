@@ -103,13 +103,18 @@ class ArchiMatePlantUMLRenderer:
         return "plantuml"
 
     def render(self, graph: nx.MultiDiGraph, *, title: str | None = None) -> str:
-        lines: list[str] = ["@startuml", "!include <archimate/Archimate>", ""]
+        # Defer header lines — we only add the ArchiMate include when at least
+        # one node uses a real ArchiMate macro (plain rectangles don't need it
+        # and it actually causes a fatal parsing error on recent PlantUML builds).
+        node_lines: list[str] = []
+        edge_lines: list[str] = []
 
         diagram_title = title or graph.graph.get("model_id", "ArchiMate")
-        lines.append(f"title {diagram_title}")
-        lines.append("")
 
         alias_of: dict = {}
+        # Tracks aliases declared as plain `rectangle` (not ArchiMate macros).
+        # Edges involving these nodes cannot use Rel_* macros.
+        fallback_aliases: set[str] = set()
 
         # Skeleton detection, auto-labeling
         type_counts: Counter[str] = Counter(
@@ -138,17 +143,21 @@ class ArchiMatePlantUMLRenderer:
                 display_name = name
 
             macro = _node_macro(ntype)
-            label = _node_label(ntype, display_name)
+            # Guarantee a non-empty label; fall back to the alias so PlantUML
+            # never sees `archimate "" as n0` which confuses the parser.
+            label = _node_label(ntype, display_name) or display_name or alias
 
             if macro:
-                # unquoted alias, quoted label
-                lines.append(f'{macro}({alias}, "{label}")')
+                # Real ArchiMate element — use the stdlib macro
+                node_lines.append(f'{macro}({alias}, "{label}")')
             else:
-                lines.append(f"' WARNING: unknown element type '{ntype}'")
-                # unquoted alias
-                lines.append(f'rectangle "{label}" as {alias} #LightGray')
-
-        lines.append("")
+                # Unknown/typeless node: use the `archimate` keyword.
+                # Unlike `rectangle`, it:
+                #   - does NOT require !include <archimate/Archimate>
+                #   - forces correct diagram-type detection (not activity)
+                #   - supports --> arrows without ambiguity
+                node_lines.append(f'archimate #LightGray "{label}" as {alias}')
+                fallback_aliases.add(alias)
 
         # Edges
         for u, v, _k, attr in graph.edges(keys=True, data=True):
@@ -157,15 +166,26 @@ class ArchiMatePlantUMLRenderer:
             tgt   = alias_of.get(v)
 
             if src is None or tgt is None:
-                lines.append(f"' WARNING: dangling edge ({u} -> {v})")
+                edge_lines.append(f"' WARNING: dangling edge ({u} -> {v})")
                 continue
 
-            if rtype in RELATIONSHIP_TYPES:
-                # unquoted, unquoted
-                lines.append(f'Rel_{rtype}({src}, {tgt})')
+            uses_fallback = src in fallback_aliases or tgt in fallback_aliases
+            if rtype in RELATIONSHIP_TYPES and not uses_fallback:
+                # Both endpoints are proper ArchiMate macro elements
+                edge_lines.append(f'Rel_{rtype}({src}, {tgt})')
             else:
-                lines.append(f"' WARNING: unknown relationship type '{rtype}'")
-                lines.append(f'{src} --> {tgt}')
+                # At least one endpoint is an `archimate` fallback node —
+                # use a plain arrow (Rel_* macros only work with stdlib elements)
+                label_suffix = f": {rtype}" if rtype else ""
+                edge_lines.append(f'{src} --> {tgt}{label_suffix}')
 
-        lines += ["", "@enduml"]
-        return "\n".join(lines)
+        # Include the ArchiMate stdlib only when real macro elements are present;
+        # it causes a fatal parse error on recent PlantUML builds when no macro
+        # elements exist.
+        uses_archimate_macros = len(fallback_aliases) < graph.number_of_nodes()
+        header = ["@startuml"]
+        if uses_archimate_macros:
+            header.append("!include <archimate/Archimate>")
+        header += ["", f"title {diagram_title}", ""]
+
+        return "\n".join(header + node_lines + [""] + edge_lines + ["", "@enduml"])

@@ -160,8 +160,8 @@ def test_renderer_unknown_type_fallback(renderer):
     g = nx.MultiDiGraph()
     g.add_node("n1", id="n1", type="Unicorn", label="Horned creature", layer=None)
     result = renderer.render(g)
-    assert "WARNING: unknown element type 'Unicorn'" in result
-    assert "rectangle" in result
+    assert "archimate" in result
+    assert "Horned creature" in result
 
 
 # ── filters ───────────────────────────────────────────────────────────────────

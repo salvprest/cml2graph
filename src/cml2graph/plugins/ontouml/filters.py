@@ -18,14 +18,26 @@ def by_category(graph: nx.MultiDiGraph, categories: str | Iterable[str]) -> nx.M
     return graph.subgraph(nodes).copy()
 
 
-def by_relationship_type(graph: nx.MultiDiGraph, types: str | Iterable[str]) -> nx.MultiDiGraph:
-    """Keep all nodes, remove edges whose type is not in selected types."""
+def by_relation(graph: nx.MultiDiGraph, types: str | Iterable[str]) -> nx.MultiDiGraph:
+    """Keep all nodes, remove edges whose type is not in the selected relation stereotypes."""
     keep = _as_set(types)
     H = graph.copy()
     to_remove = [
         (u, v, k)
         for u, v, k, d in H.edges(keys=True, data=True)
         if d.get("type") not in keep
+    ]
+    H.remove_edges_from(to_remove)
+    return H
+
+
+def by_generalization(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    """Keep all nodes, remove all edges except generalization edges."""
+    H = graph.copy()
+    to_remove = [
+        (u, v, k)
+        for u, v, k, d in H.edges(keys=True, data=True)
+        if d.get("type") != "generalization"
     ]
     H.remove_edges_from(to_remove)
     return H

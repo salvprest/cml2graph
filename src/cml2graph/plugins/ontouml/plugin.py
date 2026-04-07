@@ -13,7 +13,8 @@ from .utils.types import STEREOTYPE_CATEGORY
 from .filters import (
     by_stereotype,
     by_category,
-    by_relationship_type,
+    by_relation,
+    by_generalization,
     by_nature,
     without_orphans,
     exclude_node_types,
@@ -48,7 +49,8 @@ class OntoUMLPlugin:
         return {
             "by_stereotype": by_stereotype,
             "by_category": by_category,
-            "by_relationship_type": by_relationship_type,
+            "by_relation": by_relation,
+            "by_generalization": by_generalization,
             "by_nature": by_nature,
             "without_orphans": without_orphans,
             "exclude_node_types": exclude_node_types,

@@ -64,7 +64,7 @@ STEREOTYPE_CATEGORY: dict[str, str] = {
 # ── All edge types that can appear on the graph ──────────────────
 
 RELATIONSHIP_TYPES: frozenset[str] = RELATION_STEREOTYPES | frozenset({
-    "generalization", "restrictedTo",
+    "generalization",
 })
 
 # ── Synonym normalisation ────────────────────────────────────────

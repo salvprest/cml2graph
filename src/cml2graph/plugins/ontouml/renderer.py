@@ -3,9 +3,12 @@ from typing import Any
 
 import networkx as nx
 
-from .utils.types import RELATION_STEREOTYPES
+from .utils.types import RELATION_STEREOTYPES, PART_WHOLE_STEREOTYPES
 _RELATION_STEREOTYPES_LOWER: frozenset[str] = frozenset(
     s.lower() for s in RELATION_STEREOTYPES
+)
+_PART_WHOLE_STEREOTYPES_LOWER: frozenset[str] = frozenset(
+    s.lower() for s in PART_WHOLE_STEREOTYPES
 )
 
 class OntoUMLJsonRenderer:
@@ -124,11 +127,50 @@ class OntoUMLPlantUMLRenderer:
         lines: list[str] = [
             "@startuml",
             f"title {graph.graph.get('model_id', 'OntoUML')}",
-            "skin rose",
+            "",
+            "' OntoUML formatting",
+            "skinparam roundcorner 10",
+            "skinparam classBorderColor #333333",
+            "skinparam classFontName Arial",
+            "skinparam shadowing false",
+            "hide circle",
+            "hide members",
+            "",
+            "' Straight line routing",
+            "skinparam linetype ortho",
+            "skinparam nodesep 60",
+            "skinparam ranksep 60",
+            "",
+            "' OntoUML Smart Paint Color Palette",
+            "skinparam class {",
+            "    BackgroundColor<<kind>> #FFB6C1",
+            "    BackgroundColor<<subkind>> #FFB6C1",
+            "    BackgroundColor<<collective>> #FFB6C1",
+            "    BackgroundColor<<quantity>> #FFB6C1",
+            "    BackgroundColor<<role>> #FFFFCC",
+            "    BackgroundColor<<phase>> #FFFFCC",
+            "    BackgroundColor<<historicalRole>> #FFFFCC",
+            "    BackgroundColor<<category>> #E0FFFF",
+            "    BackgroundColor<<mixin>> #E0FFFF",
+            "    BackgroundColor<<roleMixin>> #E0FFFF",
+            "    BackgroundColor<<phaseMixin>> #E0FFFF",
+            "    BackgroundColor<<historicalRoleMixin>> #E0FFFF",
+            "    BackgroundColor<<abstract>> #E0FFFF",
+            "    BackgroundColor<<relator>> #CCFFCC",
+            "    BackgroundColor<<mode>> #E6E6FA",
+            "    BackgroundColor<<quality>> #E6E6FA",
+            "    BackgroundColor<<event>> #F08080",
+            "    BackgroundColor<<situation>> #F08080",
+            "    BackgroundColor<<datatype>> #FFDAB9",
+            "    BackgroundColor<<enumeration>> #FFDAB9",
+            "    BackgroundColor<<type>> #FFDAB9",
+            "}",
+            "",
         ]
 
         class_counter: dict[str, int] = {}
 
+        # Nodes
         for nid, d in graph.nodes(data=True):
             alias = _safe_alias(nid)
             stereotype = d.get("stereotype") or d.get("type", "class")
@@ -146,6 +188,9 @@ class OntoUMLPlantUMLRenderer:
                 f'class "{display}" as {alias} <<{stereotype}>>'
             )
 
+        lines.append("")
+
+        # Edges
         for u, v, _k, d in graph.edges(keys=True, data=True):
             src = _safe_alias(u)
             tgt = _safe_alias(v)
@@ -158,27 +203,51 @@ class OntoUMLPlantUMLRenderer:
                     d.get("genset_is_disjoint", []),
                     d.get("genset_is_complete", []),
                 )
-                lines.append(f"{tgt} <|-- {src}: Generalization{meta}")
+                if meta:
+                    lines.append(f"{src} -up-|> {tgt} :{meta}")
+                else:
+                    lines.append(f"{src} -up-|> {tgt}")
+
+            elif etype_lower in _PART_WHOLE_STEREOTYPES_LOWER:
+                card_src = d.get("cardinality_source", "")
+                card_tgt = d.get("cardinality_target", "")
+                left_q = f'"{card_tgt}" ' if card_tgt else ""
+                right_q = f' "{card_src}"' if card_src else ""
+                arrow = "*-up-" if src == tgt else "*-down-"
+                lines.append(
+                    f'{tgt} {left_q}{arrow}{right_q} {src} : \u00AB{etype}\u00BB'
+                )
 
             elif etype_lower in _RELATION_STEREOTYPES_LOWER:
                 card_src = d.get("cardinality_source", "")
                 card_tgt = d.get("cardinality_target", "")
                 left_q = f'"{card_src}" ' if card_src else ""
                 right_q = f' "{card_tgt}"' if card_tgt else ""
+                # Hide label for the generic "relation" stereotype
+                if etype_lower != "relation":
+                    label = f' : \u00AB{etype}\u00BB'
+                else:
+                    label = ""
+                arrow = "-up->" if src == tgt else "-->"
                 lines.append(
-                    f'{src} {left_q}-->{right_q} {tgt}: <<{etype}>>'
+                    f'{src} {left_q}{arrow}{right_q} {tgt}{label}'
                 )
 
             elif etype_lower == "restrictedto":
                 lines.append(
-                    f'{src} .[#blue,dotted,thickness=2]. {tgt}: restrictedTo'
+                    f'{src} .[#888888].> {tgt} : restrictedTo'
                 )
 
             else:
-                lines.append(f"{src} --> {tgt}: {etype}")
+                card_src = d.get("cardinality_source", "")
+                card_tgt = d.get("cardinality_target", "")
+                left_q = f'"{card_src}" ' if card_src else ""
+                right_q = f' "{card_tgt}"' if card_tgt else ""
+                label = f" : {etype}" if etype else ""
+                arrow = "-up->" if src == tgt else "-->"
+                lines.append(f'{src} {left_q}{arrow}{right_q} {tgt}{label}')
 
-        lines.append("hide circle")
-        lines.append("hide members")
+        lines.append("")
         lines.append("@enduml")
         return "\n".join(lines)
 

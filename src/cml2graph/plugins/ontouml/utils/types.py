@@ -37,6 +37,11 @@ RELATION_STEREOTYPES: frozenset[str] = frozenset({
     "relation",
 })
 
+# Subset: part-whole relation stereotypes (drawn with composition diamond)
+PART_WHOLE_STEREOTYPES: frozenset[str] = frozenset({
+    "componentOf", "memberOf", "subCollectionOf", "subQuantityOf",
+})
+
 # ── Nature / restrictedTo values ─────────────────────────────────
 
 NATURE_TYPES: frozenset[str] = frozenset({

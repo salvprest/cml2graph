@@ -339,7 +339,7 @@ def test_render_plantuml():
     assert "@startuml" in text
     assert "Person" in text
     assert "<<kind>>" in text
-    assert "Generalization" in text
+    assert "-up-|>" in text
     assert "{disjoint}" in text
     assert "@enduml" in text
     Path(path).unlink()

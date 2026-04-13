@@ -80,11 +80,7 @@ def _node_label(ntype: str, display_name: str) -> str:
     is shown as a smaller label above it.
     """
     if display_name and display_name != ntype:
-        # Check if display_name is an auto-label like "BusinessProcess_0"
-        # In that case, don't add the type annotation (it's redundant)
-        if display_name.startswith(ntype):
-            return display_name
-        return f"<size:10>//\\u00ab{ntype}\\u00bb//</size>\\n{display_name}"
+        return display_name
     return ntype
 
 

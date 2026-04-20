@@ -17,42 +17,55 @@ _RELATIONSHIP_TYPES: list[str] = sorted(RELATIONSHIP_TYPES)
 FILTER_TOOLS: dict[str, dict] = {
     "by_layer": {
         "description": (
-            "Filter the ArchiMate graph to keep only elements "
-            "belonging to the specified layers. Removes non-matching "
-            "nodes and their incident edges."
+            "Filter the ArchiMate graph by layer. By default (exclude=False) "
+            "keeps only nodes in the specified layers; set exclude=True to "
+            "remove those nodes instead. Incident edges are updated accordingly."
         ),
         "params": {
             "layers": {
-                "description": "ArchiMate layers to keep.",
+                "description": "ArchiMate layers to select.",
                 "type": "array",
                 "enum": _LAYERS,
+            },
+            "exclude": {
+                "description": "If true, remove the matching nodes instead of keeping them.",
+                "type": "boolean",
             },
         },
     },
     "by_element_type": {
         "description": (
-            "Keep only nodes whose ArchiMate element type matches "
-            "one of the given values. Removes non-matching nodes "
-            "and their incident edges."
+            "Filter nodes by ArchiMate element type. By default (exclude=False) "
+            "keeps only matching nodes; set exclude=True to remove them instead. "
+            "Incident edges are updated accordingly."
         ),
         "params": {
             "types": {
-                "description": "ArchiMate element types to keep.",
+                "description": "ArchiMate element types to select.",
                 "type": "array",
                 "enum": _ELEMENT_TYPES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching nodes instead of keeping them.",
+                "type": "boolean",
             },
         },
     },
     "by_relationship_type": {
         "description": (
-            "Keep all nodes but remove edges whose relationship type "
-            "does not match any of the given values."
+            "Filter edges by ArchiMate relationship type. By default (exclude=False) "
+            "keeps only matching edges; set exclude=True to remove them instead. "
+            "All nodes are preserved."
         ),
         "params": {
             "types": {
-                "description": "ArchiMate relationship types to keep.",
+                "description": "ArchiMate relationship types to select.",
                 "type": "array",
                 "enum": _RELATIONSHIP_TYPES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching edges instead of keeping them.",
+                "type": "boolean",
             },
         },
     },

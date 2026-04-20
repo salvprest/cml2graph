@@ -26,63 +26,87 @@ _NATURES: list[str] = [
 FILTER_TOOLS: dict[str, dict] = {
     "by_stereotype": {
         "description": (
-            "Keep only nodes whose OntoUML stereotype matches one "
-            "of the given values. Non-matching nodes and their "
-            "incident edges are removed."
+            "Filter nodes by OntoUML stereotype. By default (exclude=False) "
+            "keeps only matching nodes; set exclude=True to remove them instead. "
+            "Incident edges are updated accordingly."
         ),
         "params": {
             "stereotypes": {
-                "description": "OntoUML class stereotypes to keep.",
+                "description": "OntoUML class stereotypes to select.",
                 "type": "array",
                 "enum": _CLASS_STEREOTYPES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching nodes instead of keeping them.",
+                "type": "boolean",
             },
         },
     },
     "by_category": {
         "description": (
-            "Keep only nodes in the given ontological categories. "
-            "Categories group stereotypes: Substantial (kind, subkind, "
-            "role…), Moment (relator, quality, mode), NonSortal "
-            "(category, mixin…), Event, Situation."
+            "Filter nodes by ontological category. Categories group stereotypes: "
+            "Substantial (kind, subkind, role…), Moment (relator, quality, mode), "
+            "NonSortal (category, mixin…), Event, Situation. "
+            "By default (exclude=False) keeps only matching nodes; set exclude=True to remove them."
         ),
         "params": {
             "categories": {
-                "description": "Ontological categories to keep.",
+                "description": "Ontological categories to select.",
                 "type": "array",
                 "enum": _CATEGORIES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching nodes instead of keeping them.",
+                "type": "boolean",
             },
         },
     },
     "by_relation": {
         "description": (
-            "Keep all nodes but remove edges whose type does not "
-            "match one of the given OntoUML relation stereotypes."
+            "Filter edges by OntoUML relation stereotype. By default (exclude=False) "
+            "keeps only matching edges; set exclude=True to remove them instead. "
+            "All nodes are preserved."
         ),
         "params": {
             "types": {
-                "description": "Relation stereotypes to keep.",
+                "description": "Relation stereotypes to select.",
                 "type": "array",
                 "enum": _RELATION_STEREOTYPES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching edges instead of keeping them.",
+                "type": "boolean",
             },
         },
     },
     "by_generalization": {
         "description": (
-            "Keep all nodes but remove all edges except "
-            "generalization edges."
+            "Filter generalization edges. By default (exclude=False) removes all "
+            "non-generalization edges; set exclude=True to remove generalization "
+            "edges instead. All nodes are preserved."
         ),
-        "params": {},
+        "params": {
+            "exclude": {
+                "description": "If true, remove generalization edges instead of keeping them.",
+                "type": "boolean",
+            },
+        },
     },
     "by_nature": {
         "description": (
-            "Keep only nodes whose ontological nature (restrictedTo) "
-            "contains at least one of the requested values."
+            "Filter nodes by ontological nature (restrictedTo). By default (exclude=False) "
+            "keeps only nodes whose nature contains at least one of the requested values; "
+            "set exclude=True to remove those nodes instead."
         ),
         "params": {
             "natures": {
-                "description": "Ontological natures to keep.",
+                "description": "Ontological natures to select.",
                 "type": "array",
                 "enum": _NATURES,
+            },
+            "exclude": {
+                "description": "If true, remove the matching nodes instead of keeping them.",
+                "type": "boolean",
             },
         },
     },

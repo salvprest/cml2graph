@@ -3,36 +3,51 @@ from collections.abc import Callable, Iterable
 import networkx as nx
 
 def by_layer(
-    graph: nx.MultiDiGraph, layers: str | Iterable[str]
+    graph: nx.MultiDiGraph, layers: str | Iterable[str], exclude: bool = False
 ) -> nx.MultiDiGraph:
-    """Subgraph induced by nodes in the given layers."""
-    layers = _as_set(layers)
-    keep = [n for n, d in graph.nodes(data=True) if d.get("layer") in layers]
+    """Filter nodes by layer. If exclude=False (default), keep only matching nodes. If exclude=True, remove matching nodes."""
+    selected = _as_set(layers)
+    if exclude:
+        keep = [n for n, d in graph.nodes(data=True) if d.get("layer") not in selected]
+    else:
+        keep = [n for n, d in graph.nodes(data=True) if d.get("layer") in selected]
     return graph.subgraph(keep).copy()
 
 
 def by_element_type(
-    graph: nx.MultiDiGraph, types: str | Iterable[str]
+    graph: nx.MultiDiGraph, types: str | Iterable[str], exclude: bool = False
 ) -> nx.MultiDiGraph:
-    """Subgraph induced by nodes of the given element types."""
-    types = _as_set(types)
-    keep = [n for n, d in graph.nodes(data=True) if d.get("type") in types]
+    """Filter nodes by element type. If exclude=False (default), keep only matching nodes. If exclude=True, remove matching nodes."""
+    selected = _as_set(types)
+    if exclude:
+        keep = [n for n, d in graph.nodes(data=True) if d.get("type") not in selected]
+    else:
+        keep = [n for n, d in graph.nodes(data=True) if d.get("type") in selected]
     return graph.subgraph(keep).copy()
 
 
 def by_relationship_type(
-    graph: nx.MultiDiGraph, types: str | Iterable[str]
+    graph: nx.MultiDiGraph, types: str | Iterable[str], exclude: bool = False
 ) -> nx.MultiDiGraph:
-    """Keep all nodes but only edges whose type is in types."""
-    types = _as_set(types)
+    """Filter edges by relationship type. If exclude=False (default), keep only matching edges. If exclude=True, remove matching edges."""
+    selected = _as_set(types)
     H = graph.copy()
-    H.remove_edges_from(
-        [
-            (u, v, k)
-            for u, v, k, d in H.edges(keys=True, data=True)
-            if d.get("type") not in types
-        ]
-    )
+    if exclude:
+        H.remove_edges_from(
+            [
+                (u, v, k)
+                for u, v, k, d in H.edges(keys=True, data=True)
+                if d.get("type") in selected
+            ]
+        )
+    else:
+        H.remove_edges_from(
+            [
+                (u, v, k)
+                for u, v, k, d in H.edges(keys=True, data=True)
+                if d.get("type") not in selected
+            ]
+        )
     return H
 
 def without_orphans(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:

@@ -5,6 +5,7 @@ from typing import Any
 import networkx as nx
 
 from .utils.types import RELATION_STEREOTYPES, PART_WHOLE_STEREOTYPES
+from .utils.colors import get_color_for_class
 
 _RELATION_STEREOTYPES_LOWER: frozenset[str] = frozenset(
     s.lower() for s in RELATION_STEREOTYPES
@@ -14,44 +15,25 @@ _PART_WHOLE_STEREOTYPES_LOWER: frozenset[str] = frozenset(
 )
 
 _ONTOUML_SKINPARAMS = """\
-' OntoUML formatting
-skinparam roundcorner 10
-skinparam classBorderColor #333333
-skinparam classFontName Arial
-skinparam shadowing false
+<style>
+classDiagram {
+  class {
+    FontName Arial
+    LineColor #333333
+    RoundCorner 10
+    Padding 4
+    Shadowing 0
+  }
+}
+</style>
+
 hide circle
 hide members
 
-' Layout tuning
+' Layout tuning (no CSS equivalent yet)
 skinparam linetype ortho
 skinparam nodesep 100
 skinparam ranksep 80
-skinparam padding 4
-
-' OntoUML Smart Paint Color Palette
-skinparam class {
-    BackgroundColor<<kind>> #FFB6C1
-    BackgroundColor<<subkind>> #FFB6C1
-    BackgroundColor<<collective>> #FFB6C1
-    BackgroundColor<<quantity>> #FFB6C1
-    BackgroundColor<<role>> #FFFFCC
-    BackgroundColor<<phase>> #FFFFCC
-    BackgroundColor<<historicalRole>> #FFFFCC
-    BackgroundColor<<category>> #E0FFFF
-    BackgroundColor<<mixin>> #E0FFFF
-    BackgroundColor<<roleMixin>> #E0FFFF
-    BackgroundColor<<phaseMixin>> #E0FFFF
-    BackgroundColor<<historicalRoleMixin>> #E0FFFF
-    BackgroundColor<<abstract>> #E0FFFF
-    BackgroundColor<<relator>> #CCFFCC
-    BackgroundColor<<mode>> #E6E6FA
-    BackgroundColor<<quality>> #E6E6FA
-    BackgroundColor<<event>> #F08080
-    BackgroundColor<<situation>> #F08080
-    BackgroundColor<<datatype>> #FFDAB9
-    BackgroundColor<<enumeration>> #FFDAB9
-    BackgroundColor<<type>> #FFDAB9
-}
 """
 
 class _LayoutInfo:
@@ -205,13 +187,14 @@ class OntoUMLPlantUMLRenderer:
 
         # Emit sibling groups inside `together {}` so PlantUML keeps them
         # horizontally adjacent; track which nodes were declared there.
-        grouped = self._render_sibling_groups(node_info, layout, lines)
+        grouped = self._render_sibling_groups(graph, node_info, layout, lines)
 
         # Remaining (ungrouped) nodes
-        for nid in graph.nodes():
+        for nid, node_data in graph.nodes(data=True):
             if nid not in grouped:
                 alias, display, stereotype = node_info[nid]
-                lines.append(f'class "{display}" as {alias} <<{stereotype}>>')
+                color = get_color_for_class(stereotype, node_data.get("nature", ""))
+                lines.append(f'class "{display}" as {alias} <<{stereotype}>> {color}')
 
         lines.append("")
         self._render_edges(graph, layout, lines)
@@ -222,6 +205,7 @@ class OntoUMLPlantUMLRenderer:
     # Sibling grouping
     @staticmethod
     def _render_sibling_groups(
+        graph: nx.MultiDiGraph,
         node_info: dict[Any, tuple[str, str, str]],
         layout: _LayoutInfo,
         lines: list[str],
@@ -249,7 +233,8 @@ class OntoUMLPlantUMLRenderer:
             lines.append("together {")
             for child in children:
                 alias, display, stereotype = node_info[child]
-                lines.append(f'  class "{display}" as {alias} <<{stereotype}>>')
+                color = get_color_for_class(stereotype, graph.nodes[child].get("nature", ""))
+                lines.append(f'  class "{display}" as {alias} <<{stereotype}>> {color}')
                 grouped.add(child)
             lines.append("}")
             lines.append("")

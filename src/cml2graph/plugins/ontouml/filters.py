@@ -2,6 +2,9 @@ from collections.abc import Iterable
 
 import networkx as nx
 
+from .utils.types import AggregationKind
+
+
 def by_stereotype(graph: nx.MultiDiGraph, stereotypes: str | Iterable[str], exclude: bool = False) -> nx.MultiDiGraph:
     """Filter nodes by stereotype. If exclude=False (default), keep only matching nodes. If exclude=True, remove matching nodes."""
     selected = _as_set(stereotypes)
@@ -81,6 +84,29 @@ def by_nature(graph: nx.MultiDiGraph, natures: str | Iterable[str], exclude: boo
             if selected & {v for v in d.get("nature", "").split(",") if v}
         ]
     return graph.subgraph(nodes).copy()
+
+
+def by_aggregation_kind(graph: nx.MultiDiGraph, kinds: str | Iterable[str], exclude: bool = False) -> nx.MultiDiGraph:
+    """Filter edges by aggregation kind (OntoUML Vocabulary: 'composite', 'shared', 'none').
+    If exclude=False (default), keep only edges whose aggregation_kind is in kinds.
+    If exclude=True, remove those edges.
+    """
+    selected = _as_set(kinds)
+    H = graph.copy()
+    if exclude:
+        to_remove = [
+            (u, v, k)
+            for u, v, k, d in H.edges(keys=True, data=True)
+            if d.get("aggregation_kind", AggregationKind.NONE) in selected
+        ]
+    else:
+        to_remove = [
+            (u, v, k)
+            for u, v, k, d in H.edges(keys=True, data=True)
+            if d.get("aggregation_kind", AggregationKind.NONE) not in selected
+        ]
+    H.remove_edges_from(to_remove)
+    return H
 
 
 def without_orphans(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:

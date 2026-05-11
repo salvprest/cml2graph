@@ -34,13 +34,39 @@ RELATION_STEREOTYPES: frozenset[str] = frozenset({
     "instantiation", "manifestation",
     "participation", "participational",
     "termination", "triggers",
+    "derivation",
     "relation",
 })
 
-# Subset: part-whole relation stereotypes (drawn with composition diamond)
+# Subset: part-whole relation stereotypes (mereology, drawn with diamond).
+# participational is mereology and gets a diamond arrow.
 PART_WHOLE_STEREOTYPES: frozenset[str] = frozenset({
     "componentOf", "memberOf", "subCollectionOf", "subQuantityOf",
+    "participational",
 })
+
+# AggregationKind values (OntoUML Vocabulary canonical lowercase) ──
+# Source: https://w3id.org/ontouml#AggregationKind
+# composite -> filled diamond (*--), strong/inseparable parthood
+# shared    -> hollow diamond (o--), weak/separable parthood
+# none      -> plain association, no diamond
+class AggregationKind:
+    COMPOSITE = "composite"
+    SHARED    = "shared"
+    NONE      = "none"
+
+
+# Maps each mereology stereotype to its canonical aggregation kind.
+# memberOf is the only separable (shared/hollow) parthood; all others are
+# inseparable (composite/filled). subCollectionOf is composite, not shared
+# this differs from naive UML intuition.
+MEREOLOGY_AGGREGATION_KIND: dict[str, str] = {
+    "memberOf":        AggregationKind.SHARED,
+    "componentOf":     AggregationKind.COMPOSITE,
+    "subCollectionOf": AggregationKind.COMPOSITE,
+    "subQuantityOf":   AggregationKind.COMPOSITE,
+    "participational": AggregationKind.COMPOSITE,
+}
 
 # ── Nature / restrictedTo values ─────────────────────────────────
 

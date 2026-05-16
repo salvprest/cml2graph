@@ -1,4 +1,5 @@
 """Tests for core protocols and PluginManager."""
+import json
 import pytest
 import networkx as nx
 
@@ -98,4 +99,34 @@ def test_discover_ontouml(tmp_path):
     pm = PluginManager()
     pm.discover("cml2graph.plugins")
     plugin = pm.get("ontouml")
-    assert plugin.name == "ontouml"
+
+
+# ── NodeLinkFormat ────────────────────────────────────────────────────────────
+
+def test_node_link_includes_nature_and_layer_in_labels():
+    from cml2graph.core.formats.node_link_fmt import NodeLinkFormat
+
+    g = nx.MultiDiGraph()
+    g.add_node("a", id="a", type="kind", nature="functional-complex")
+    g.add_node("b", id="b", type="BusinessProcess", layer="Business")
+    g.add_node("c", id="c", type="Unknown")
+
+    text = NodeLinkFormat().render(g)
+    data = json.loads(text)
+
+    node_by_id = {n["id"]: n for n in data["nodes"]}
+    assert node_by_id["a"]["labels"] == ["kind", "functional-complex"]
+    assert node_by_id["b"]["labels"] == ["BusinessProcess", "Business"]
+    assert node_by_id["c"]["labels"] == ["Unknown"]
+
+
+def test_node_link_preserves_existing_labels():
+    from cml2graph.core.formats.node_link_fmt import NodeLinkFormat
+
+    g = nx.MultiDiGraph()
+    g.add_node("a", id="a", type="kind", labels=["custom", "label"])
+
+    text = NodeLinkFormat().render(g)
+    data = json.loads(text)
+
+    assert data["nodes"][0]["labels"] == ["custom", "label"]

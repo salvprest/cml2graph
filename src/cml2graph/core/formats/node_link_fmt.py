@@ -19,7 +19,16 @@ class NodeLinkFormat:
         for node in data.get("nodes", []):
             if "labels" not in node:
                 ntype = node.get("type") or node.get("label") or ""
-                node["labels"] = [ntype] if ntype else []
+                labels = [ntype] if ntype else []
+                # Include additional distinguishing attributes so that miners
+                # (e.g. CMiner) can distinguish nodes more precisely.
+                nature = node.get("nature")
+                if nature:
+                    labels.append(nature)
+                layer = node.get("layer")
+                if layer:
+                    labels.append(layer)
+                node["labels"] = labels
         return json.dumps(data, indent=2, ensure_ascii=False)
 
     def render_corpus(self, graphs: dict[str, nx.MultiDiGraph], output_dir: Path) -> None:

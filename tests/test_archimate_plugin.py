@@ -341,3 +341,75 @@ def test_enrich_non_skeleton_unchanged(plugin, graph):
     new_labels = {d["label"] for _, d in enriched.nodes(data=True)}
 
     assert original_labels == new_labels
+
+
+def test_enrich_reconstructs_layer_from_labels():
+    """If a skeleton carries multi-label node info, layer is recovered from labels."""
+    gspan_text = "t # 0\nv 0 BusinessProcess Business\nv 1 ApplicationService Application\ne 0 1 Serving"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["layer"] == "Business"
+    assert enriched.nodes[1]["layer"] == "Application"
+
+
+# ── full round-trip integration ───────────────────────────────────────────────
+
+def test_full_roundtrip_node_link_to_gspan_to_enrich_to_plantuml():
+    """End-to-end: node_link render → gSpan parse → enrich → PlantUML render.
+
+    Verifies that layer survives the full pipeline, including the
+    multi-label encoding that CMiner relies on.
+    """
+    from cml2graph.core.formats.node_link_fmt import NodeLinkFormat
+
+    # 1. Build a graph as it would come from the parser
+    g = nx.MultiDiGraph()
+    g.add_node("e1", id="e1", type="BusinessProcess", label="HandleOrder",
+               layer="Business")
+    g.add_node("e2", id="e2", type="ApplicationService", label="OrderSvc",
+               layer="Application")
+    g.add_edge("e1", "e2", type="Serving", label="Serving")
+
+    # 2. Render to node-link JSON (what gets sent to CMiner)
+    nlf = NodeLinkFormat()
+    json_text = nlf.render(g)
+
+    import json as _json
+    data = _json.loads(json_text)
+    for node in data["nodes"]:
+        assert "labels" in node
+        if node["type"] == "BusinessProcess":
+            assert "Business" in node["labels"]
+        if node["type"] == "ApplicationService":
+            assert "Application" in node["labels"]
+
+    # 3. Simulate CMiner gSpan skeleton output with multi-label nodes
+    gspan_skeleton = (
+        "t # 0\n"
+        "v 0 BusinessProcess Business\n"
+        "v 1 ApplicationService Application\n"
+        "e 0 1 Serving\n"
+    )
+
+    # 4. Parse the gSpan skeleton
+    gspan_fmt = GSpanFormat()
+    patterns = gspan_fmt.parse(gspan_skeleton)
+    assert len(patterns) == 1
+    skeleton = patterns[0]
+
+    assert skeleton.nodes[0]["labels"] == ["BusinessProcess", "Business"]
+    assert skeleton.nodes[1]["labels"] == ["ApplicationService", "Application"]
+
+    # 5. Enrich the skeleton
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(skeleton)
+
+    assert enriched.nodes[0]["layer"] == "Business"
+    assert enriched.nodes[1]["layer"] == "Application"
+
+    # 6. Render to PlantUML — should not crash
+    plantuml = plugin.render(enriched, "plantuml")
+    assert "BusinessProcess" in plantuml

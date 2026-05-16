@@ -156,3 +156,46 @@ def test_parse_file(fmt, simple_graph, tmp_path):
     graphs = fmt.parse_file(str(gspan_file))
     assert len(graphs) == 1
     assert graphs[0].number_of_nodes() == 2
+
+
+# ── Multi-label nodes ─────────────────────────────────────────────────────────
+
+MULTI_LABEL_GSPAN = """\
+t # 0 test
+v 0 kind functional-complex
+v 1 relator relator
+v 2 kind collective
+e 0 1 mediation
+e 1 2 mediation
+"""
+
+
+def test_parse_multi_label_nodes(fmt):
+    graphs = fmt.parse(MULTI_LABEL_GSPAN)
+    assert len(graphs) == 1
+    g = graphs[0]
+    assert g.nodes[0]["labels"] == ["kind", "functional-complex"]
+    assert g.nodes[1]["labels"] == ["relator", "relator"]
+    assert g.nodes[2]["labels"] == ["kind", "collective"]
+    assert g.nodes[0]["type"] == "kind"
+    assert g.nodes[1]["type"] == "relator"
+
+
+def test_render_multi_label_nodes(fmt):
+    g = nx.MultiDiGraph()
+    g.graph["model_id"] = "test"
+    g.add_node(0, id="0", type="kind", label="kind", labels=["kind", "functional-complex"])
+    g.add_node(1, id="1", type="relator", label="relator", labels=["relator", "relator"])
+    g.add_edge(0, 1, type="mediation", label="mediation")
+
+    text = fmt.render(g)
+    assert "v 0 kind functional-complex" in text
+    assert "v 1 relator relator" in text
+
+
+def test_multi_label_roundtrip(fmt):
+    graphs = fmt.parse(MULTI_LABEL_GSPAN)
+    text = fmt.render(graphs[0])
+    graphs2 = fmt.parse(text)
+    assert graphs2[0].nodes[0]["labels"] == ["kind", "functional-complex"]
+    assert graphs2[0].nodes[2]["labels"] == ["kind", "collective"]

@@ -9,7 +9,7 @@ from cml2graph.core.utils.pattern_enricher import is_graph_skeleton, auto_label_
 
 from .parser import parse as _parse
 from . import prompts as _prompts
-from .utils.types import STEREOTYPE_CATEGORY
+from .utils.types import STEREOTYPE_CATEGORY, DEFAULT_NATURE_BY_STEREOTYPE, NATURE_TYPES
 from .filters import (
     by_stereotype,
     by_category,
@@ -107,6 +107,19 @@ class OntoUMLPlugin:
             # Add category if missing
             if "category" not in data:
                 data["category"] = STEREOTYPE_CATEGORY.get(ntype, "")
+            # Add nature if missing-critical for OntoUML color rendering.
+            # Try to reconstruct from labels (e.g. from CMiner multi-label output)
+            # before falling back to the default stereotype->nature mapping.
+            if "nature" not in data:
+                labels = data.get("labels", [])
+                reconstructed = ""
+                for lab in labels:
+                    if lab != ntype and lab in NATURE_TYPES:
+                        reconstructed = lab
+                        break
+                data["nature"] = reconstructed or DEFAULT_NATURE_BY_STEREOTYPE.get(
+                    ntype.lower(), ""
+                )
 
         # Normalize edge labels to lowercase for case-insensitive matching
         for _, _, data in graph.edges(data=True):

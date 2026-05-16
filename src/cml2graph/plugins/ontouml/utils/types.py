@@ -77,6 +77,34 @@ NATURE_TYPES: frozenset[str] = frozenset({
     "event", "situation", "type",
 })
 
+# ── Default nature inferred from stereotype (fallback for skeletons) ─
+# Used when restrictedTo is unavailable (e.g. mined patterns).
+# TODO: Controll if we can infer nature reliably
+DEFAULT_NATURE_BY_STEREOTYPE: dict[str, str] = {
+    "kind": "functional-complex",
+    "subkind": "functional-complex",
+    "role": "functional-complex",
+    "phase": "functional-complex",
+    "collective": "collective",
+    "quantity": "quantity",
+    "historicalrole": "functional-complex",
+    "relator": "relator",
+    "quality": "quality",
+    "mode": "intrinsic-mode",
+    "event": "event",
+    "situation": "situation",
+    "type": "type",
+    "enumeration": "type",
+    "datatype": "type",
+    # Non-sortals
+    "category": "abstract",
+    "mixin": "abstract",
+    "phasemixin": "abstract",
+    "rolemixin": "abstract",
+    "abstract": "abstract",
+    "historicalrolemixin": "abstract",
+}
+
 # ── Stereotype to semantic category ───────────────────────────────
 
 STEREOTYPE_CATEGORY: dict[str, str] = {

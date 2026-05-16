@@ -497,3 +497,145 @@ def test_enrich_non_skeleton_unchanged():
     new_labels = {d["label"] for _, d in enriched.nodes(data=True)}
 
     assert original_labels == new_labels
+
+
+def test_enrich_skeleton_gets_nature():
+    gspan_text = "t # 0\nv 0 kind\nv 1 relator\ne 0 1 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["nature"] == "functional-complex"
+    assert enriched.nodes[1]["nature"] == "relator"
+
+
+def test_enrich_unknown_type_gets_empty_nature():
+    gspan_text = "t # 0\nv 0 UnknownStereotype\ne 0 0 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["nature"] == ""
+
+
+def test_color_fallback_uses_stereotype_when_nature_missing():
+    from cml2graph.plugins.ontouml.utils.colors import get_color_for_class, COLOR_FUNCTIONAL_COMPLEX_DARK
+
+    # When nature is empty, get_color_for_class should infer it from stereotype
+    assert get_color_for_class("kind", "") == COLOR_FUNCTIONAL_COMPLEX_DARK
+
+
+def test_enrich_reconstructs_nature_from_labels():
+    """If a skeleton carries multi-label node info, nature is recovered from labels."""
+    gspan_text = "t # 0\nv 0 kind functional-complex\nv 1 relator relator\ne 0 1 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["nature"] == "functional-complex"
+    assert enriched.nodes[1]["nature"] == "relator"
+
+
+def test_enrich_reconstructs_nature_from_labels_overrides_default():
+    """A kind with collective nature in labels should not get functional-complex default."""
+    gspan_text = "t # 0\nv 0 kind collective\ne 0 0 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["nature"] == "collective"
+
+
+# ── full round-trip integration ───────────────────────────────────────────────
+
+def test_full_roundtrip_node_link_to_gspan_to_enrich_to_plantuml():
+    """End-to-end: node_link render → gSpan parse → enrich → PlantUML render.
+
+    Verifies that nature/color survive the full pipeline, including the
+    multi-label encoding that CMiner relies on.
+    """
+    from cml2graph.core.formats.node_link_fmt import NodeLinkFormat
+    from cml2graph.plugins.ontouml.utils.colors import (
+        get_color_for_class,
+        COLOR_FUNCTIONAL_COMPLEX_DARK,
+        COLOR_RELATOR_DARK,
+    )
+
+    # 1. Build a graph as it would come from the parser
+    g = nx.MultiDiGraph()
+    g.add_node("c1", id="c1", type="kind", label="Person",
+               stereotype="kind", nature="functional-complex")
+    g.add_node("c2", id="c2", type="relator", label="Employment",
+               stereotype="relator", nature="relator")
+    g.add_edge("c1", "c2", type="mediation", label="mediation")
+
+    # 2. Render to node-link JSON (what gets sent to CMiner)
+    nlf = NodeLinkFormat()
+    json_text = nlf.render(g)
+
+    # Verify labels include nature
+    import json
+    data = json.loads(json_text)
+    for node in data["nodes"]:
+        assert "labels" in node
+        if node["type"] == "kind":
+            assert "functional-complex" in node["labels"]
+        if node["type"] == "relator":
+            assert "relator" in node["labels"]
+
+    # 3. Simulate CMiner output: a gSpan skeleton with multi-label nodes
+    #    (CMiner preserves labels in the pattern output)
+    gspan_skeleton = (
+        "t # 0\n"
+        "v 0 kind functional-complex\n"
+        "v 1 relator relator\n"
+        "e 0 1 mediation\n"
+    )
+
+    # 4. Parse the gSpan skeleton
+    gspan_fmt = GSpanFormat()
+    patterns = gspan_fmt.parse(gspan_skeleton)
+    assert len(patterns) == 1
+    skeleton = patterns[0]
+
+    # Verify labels survived parsing
+    assert skeleton.nodes[0]["labels"] == ["kind", "functional-complex"]
+    assert skeleton.nodes[1]["labels"] == ["relator", "relator"]
+
+    # 5. Enrich the skeleton
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(skeleton)
+
+    # Verify nature was reconstructed from labels
+    assert enriched.nodes[0]["nature"] == "functional-complex"
+    assert enriched.nodes[1]["nature"] == "relator"
+
+    # 6. Render to PlantUML — should not crash and should contain colors
+    plantuml = plugin.render(enriched, "plantuml")
+    assert "kind" in plantuml
+
+    # 7. Verify correct colors would be used
+    assert get_color_for_class("kind", "functional-complex") == COLOR_FUNCTIONAL_COMPLEX_DARK
+    assert get_color_for_class("relator", "relator") == COLOR_RELATOR_DARK
+
+
+def test_roundtrip_nature_order_independence():
+    """Nature label at any position in labels list should be reconstructed."""
+    # Nature appears before type wouldn't normally happen, but test robustness
+    gspan_text = "t # 0\nv 0 kind functional-complex\ne 0 0 mediation"
+    graphs = GSpanFormat().parse(gspan_text)
+
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+    assert enriched.nodes[0]["nature"] == "functional-complex"
+
+    # Now test with nature that matches the type name (e.g. "relator")
+    gspan_text2 = "t # 0\nv 0 relator relator\ne 0 0 mediation"
+    graphs2 = GSpanFormat().parse(gspan_text2)
+    enriched2 = plugin.enrich_pattern(graphs2[0])
+    # "relator" appears as both type and label — should still get nature from default
+    assert enriched2.nodes[0]["nature"] == "relator"

@@ -79,9 +79,18 @@ class ArchiMatePlugin:
 
         for _, data in graph.nodes(data=True):
             ntype = data.get("type", "")
-            # Add layer if missing — critical for ArchiMate rendering
+            # Add layer if missing — critical for ArchiMate rendering.
+            # Try to reconstruct from labels (e.g. from CMiner multi-label output)
+            # before falling back to the type->layer mapping.
             if "layer" not in data:
-                data["layer"] = ELEMENT_LAYER.get(ntype, "Other")
+                labels = data.get("labels", [])
+                _layer_values = set(ELEMENT_LAYER.values())
+                reconstructed = ""
+                for lab in labels:
+                    if lab != ntype and lab in _layer_values:
+                        reconstructed = lab
+                        break
+                data["layer"] = reconstructed or ELEMENT_LAYER.get(ntype, "Other")
 
         for _, _, data in graph.edges(data=True):
             if "label" not in data:

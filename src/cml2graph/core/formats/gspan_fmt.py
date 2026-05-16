@@ -111,12 +111,14 @@ class GSpanFormat:
             # vertex
             elif tag == "v" and current_graph is not None:
                 idx = int(parts[1])
-                vtype = parts[2] if len(parts) > 2 else "unknown"
+                labels = parts[2:] if len(parts) > 2 else []
+                vtype = labels[0] if labels else "unknown"
                 current_graph.add_node(
                     idx,
                     id=str(idx),
                     type=vtype,
                     label=vtype,
+                    labels=labels,
                 )
 
             # edge
@@ -160,8 +162,13 @@ class GSpanFormat:
         idx_of: dict = {}
         for idx, (nid, d) in enumerate(graph.nodes(data=True)):
             idx_of[nid] = idx
-            ntype = d.get("type") or d.get("label") or "unknown"
-            lines.append(f"v {idx} {ntype}")
+            labels = d.get("labels")
+            if labels:
+                line = f"v {idx} {' '.join(labels)}"
+            else:
+                ntype = d.get("type") or d.get("label") or "unknown"
+                line = f"v {idx} {ntype}"
+            lines.append(line)
 
         for u, v, _k, d in graph.edges(keys=True, data=True):
             etype = d.get("type") or d.get("label") or "unknown"

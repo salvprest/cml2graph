@@ -8,6 +8,8 @@ See: SmartColoringUtils.java
 
 from __future__ import annotations
 
+from .types import DEFAULT_NATURE_BY_STEREOTYPE
+
 # Color constants (RGB → hex)
 COLOR_ABSTRACT = "#FFFFFF"                 # RGB(255, 255, 255)
 COLOR_COLLECTIVE = "#FFDADD"               # RGB(255, 218, 221)
@@ -48,6 +50,11 @@ def get_color_for_class(stereotype: str, nature: str) -> str:
     """
     stereotype_lower = (stereotype or "").lower()
     nature = (nature or "").strip()
+
+    # Fallback: infer nature from stereotype when restrictedTo is absent
+    # (common for mined pattern skeletons).
+    if not nature and stereotype_lower:
+        nature = DEFAULT_NATURE_BY_STEREOTYPE.get(stereotype_lower, "")
 
     if not nature:
         return COLOR_NON_SPECIFIC

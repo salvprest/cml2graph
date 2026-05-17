@@ -97,6 +97,22 @@ class OntoUMLPlugin:
         if not is_graph_skeleton(graph):
             return graph
 
+        # Pre-pass: CMiner may reorder labels alphabetically, so labels[0]
+        # (used as "type" by gspan_fmt) might be a nature value instead of
+        # the actual stereotype.  Fix type/label before auto_label_nodes.
+        for _, data in graph.nodes(data=True):
+            labels = data.get("labels", [])
+            if len(labels) >= 2:
+                current_type = data.get("type", "")
+                if current_type not in STEREOTYPE_CATEGORY:
+                    # Current type is not a known stereotype — find the
+                    # actual stereotype among the other labels.
+                    for lab in labels:
+                        if lab in STEREOTYPE_CATEGORY:
+                            data["type"] = lab
+                            data["label"] = lab
+                            break
+
         graph = auto_label_nodes(graph)
 
         for _, data in graph.nodes(data=True):
@@ -108,7 +124,7 @@ class OntoUMLPlugin:
             if "category" not in data:
                 data["category"] = STEREOTYPE_CATEGORY.get(ntype, "")
             # Add nature if missing-critical for OntoUML color rendering.
-            # Try to reconstruct from labels (e.g. from CMiner multi-label output)
+            # Reconstruct from labels (e.g. from CMiner multi-label output)
             # before falling back to the default stereotype->nature mapping.
             if "nature" not in data:
                 labels = data.get("labels", [])

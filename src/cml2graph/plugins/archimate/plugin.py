@@ -75,6 +75,22 @@ class ArchiMatePlugin:
         if not is_graph_skeleton(graph):
             return graph
 
+        # Pre-pass: CMiner may reorder labels alphabetically, so labels[0]
+        # (used as "type" by gspan_fmt) might be a layer value instead of
+        # the actual element type.  Fix type/label before auto_label_nodes.
+        for _, data in graph.nodes(data=True):
+            labels = data.get("labels", [])
+            if len(labels) >= 2:
+                current_type = data.get("type", "")
+                if current_type not in ELEMENT_LAYER:
+                    # Current type is not a known element — find the
+                    # actual element type among the other labels.
+                    for lab in labels:
+                        if lab in ELEMENT_LAYER:
+                            data["type"] = lab
+                            data["label"] = lab
+                            break
+
         graph = auto_label_nodes(graph)
 
         for _, data in graph.nodes(data=True):

@@ -639,3 +639,41 @@ def test_roundtrip_nature_order_independence():
     enriched2 = plugin.enrich_pattern(graphs2[0])
     # "relator" appears as both type and label — should still get nature from default
     assert enriched2.nodes[0]["nature"] == "relator"
+
+
+def test_enrich_cminer_reordered_labels():
+    """CMiner sorts labels alphabetically, so nature can appear before stereotype.
+
+    e.g. 'v 0 functional-complex subkind' — enrich must recover type=subkind.
+    """
+    gspan_text = (
+        "t # 0\n"
+        "v 0 functional-complex subkind\n"
+        "v 1 functional-complex kind\n"
+        "v 2 category functional-complex\n"
+        "e 0 1 generalization\n"
+        "e 1 2 generalization\n"
+    )
+    graphs = GSpanFormat().parse(gspan_text)
+    plugin = OntoUMLPlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    # Node 0: labels were [functional-complex, subkind] — type must be "subkind"
+    assert enriched.nodes[0]["type"] == "subkind"
+    assert enriched.nodes[0]["stereotype"] == "subkind"
+    assert enriched.nodes[0]["category"] == "Substantial"
+    assert enriched.nodes[0]["nature"] == "functional-complex"
+
+    # Node 1: labels were [functional-complex, kind] — type must be "kind"
+    assert enriched.nodes[1]["type"] == "kind"
+    assert enriched.nodes[1]["stereotype"] == "kind"
+    assert enriched.nodes[1]["category"] == "Substantial"
+    assert enriched.nodes[1]["nature"] == "functional-complex"
+
+    # Node 2: labels were [category, functional-complex] — "category" is
+    # both a stereotype and NOT a nature collision issue here since
+    # it's a valid stereotype in STEREOTYPE_CATEGORY.
+    assert enriched.nodes[2]["type"] == "category"
+    assert enriched.nodes[2]["stereotype"] == "category"
+    assert enriched.nodes[2]["category"] == "NonSortal"
+    assert enriched.nodes[2]["nature"] == "functional-complex"

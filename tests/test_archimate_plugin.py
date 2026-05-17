@@ -413,3 +413,25 @@ def test_full_roundtrip_node_link_to_gspan_to_enrich_to_plantuml():
     # 6. Render to PlantUML — should not crash
     plantuml = plugin.render(enriched, "plantuml")
     assert "BusinessProcess" in plantuml
+
+
+def test_enrich_cminer_reordered_labels():
+    """CMiner sorts labels alphabetically, so layer can appear before element type.
+
+    e.g. 'v 0 Application ApplicationService' — enrich must recover type=ApplicationService.
+    """
+    gspan_text = (
+        "t # 0\n"
+        "v 0 Application ApplicationService\n"
+        "v 1 Business BusinessProcess\n"
+        "e 0 1 Serving\n"
+    )
+    graphs = GSpanFormat().parse(gspan_text)
+    plugin = ArchiMatePlugin()
+    enriched = plugin.enrich_pattern(graphs[0])
+
+    assert enriched.nodes[0]["type"] == "ApplicationService"
+    assert enriched.nodes[0]["layer"] == "Application"
+
+    assert enriched.nodes[1]["type"] == "BusinessProcess"
+    assert enriched.nodes[1]["layer"] == "Business"

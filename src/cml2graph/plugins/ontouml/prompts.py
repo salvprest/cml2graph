@@ -92,7 +92,7 @@ FILTER_TOOLS: dict[str, dict] = {
             },
         },
     },
-    "by_nature": {
+    "by_ontological_nature": {
         "description": (
             "Filter nodes by ontological nature (restrictedTo). By default (exclude=False) "
             "keeps only nodes whose nature contains at least one of the requested values; "

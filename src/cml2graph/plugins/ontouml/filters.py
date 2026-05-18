@@ -68,8 +68,8 @@ def by_generalization(graph: nx.MultiDiGraph, exclude: bool = False) -> nx.Multi
     return H
 
 
-def by_nature(graph: nx.MultiDiGraph, natures: str | Iterable[str], exclude: bool = False) -> nx.MultiDiGraph:
-    """Filter nodes by nature. If exclude=False (default), keep only nodes whose nature contains at least one of the values. If exclude=True, remove those nodes."""
+def by_ontological_nature(graph: nx.MultiDiGraph, natures: str | Iterable[str], exclude: bool = False) -> nx.MultiDiGraph:
+    """Filter nodes by ontological nature. If exclude=False (default), keep only nodes whose nature contains at least one of the values. If exclude=True, remove those nodes."""
     selected = _as_set(natures)
     if exclude:
         nodes = [

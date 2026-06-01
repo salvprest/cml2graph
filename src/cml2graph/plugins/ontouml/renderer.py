@@ -35,6 +35,57 @@ _DASHED_STEREOTYPES_LOWER: frozenset[str] = frozenset({
     "derivation",
 })
 
+_DEFAULT_HIGHLIGHT_COLOR = "#FF4444"
+
+
+def _get_highlight_color(data: dict) -> str:
+    """Return the fill highlight color if present, else ``''``.
+
+    Returns the color ONLY if both ``highlight=True`` and
+    ``highlight_color`` are set.  Does NOT fall back to a default.
+    """
+    if data.get("highlight"):
+        return data.get("highlight_color", "")
+    return ""
+
+
+def _get_highlight_line_color(data: dict) -> str:
+    """Return the line/border highlight color if present, else ``''``.
+
+    Only uses ``highlight_line_color`` — does NOT fall back to ``highlight_color``
+    (that is for fill only).  Returns ``''`` when ``highlight`` is falsy or
+    ``highlight_line_color`` is not set.
+    """
+    if not data.get("highlight"):
+        return ""
+    return data.get("highlight_line_color", "")
+
+
+def _is_highlighted(data: dict) -> bool:
+    """Return True when the element is marked for highlighting."""
+    return bool(data.get("highlight"))
+
+
+def _node_highlight_spec(base_color: str, data: dict) -> str:
+    """Build the PlantUML color spec for a highlighted class node.
+
+    - ``highlight`` only (no colors): keep base_color, add ``line.bold;``
+    - ``highlight`` + ``highlight_color``: fill with that color, ``line.bold;``
+    - ``highlight`` + ``highlight_line_color``: also add ``line:<hex>;``
+
+    Examples::
+
+        #CCFFCC;line.bold;                    (highlight, no color)
+        #FF4444;line.bold;                    (highlight + fill color)
+        #FF4444;line:DD4444;line.bold;        (highlight + fill + line color)
+    """
+    fill = data.get("highlight_color", "") or base_color
+    explicit_line = data.get("highlight_line_color", "")
+    if explicit_line:
+        line_hex = explicit_line.lstrip("#")
+        return f"{fill};line:{line_hex};line.bold;"
+    return f"{fill};line.bold;"
+
 _ONTOUML_SKINPARAMS = """\
 <style>
 classDiagram {
@@ -208,12 +259,21 @@ def _partwhole_direction(
 
 
 # Arrow builder
-def _make_arrow(direction: str, style: str) -> str:
+def _make_arrow(direction: str, style: str, color: str = "", highlight: bool = False) -> str:
     """
-    Build a PlantUML arrow string.
+    Build a PlantUML arrow string with optional color and thickness.
 
-    When ``direction`` is empty, produce a natural arrow and let Graphviz
-    choose the best placement (no forced axis).
+    Tested working syntax for coloured thick arrows::
+
+        A -down[#red,thickness=2]-> B : «label»
+
+    When ``highlight`` is True but ``color`` is empty, only thickness is
+    applied (no color change)::
+
+        A -down[thickness=2]-> B : «label»
+
+    The bracket ``[options]`` is placed AFTER the direction keyword inside
+    the arrow dashes.
 
     Styles
     ------
@@ -221,31 +281,26 @@ def _make_arrow(direction: str, style: str) -> str:
     ``composition`` -> solid line + filled diamond   (*--)
     ``aggregation`` -> solid line + hollow diamond   (o--)
     ``assoc``       -> navigable arrow               (-->)
-                       Target end is navigable for all non-mereology
-                       stereotypes; mereology uses unspecified navigability.
-    ``dashed``      -> dashed line + open arrow      (.[#888888].>)
+    ``dashed``      -> dashed line + open arrow      (..>)
     """
-    if not direction:
-        if style == "gen":
-            return "--|>"
-        if style == "composition":
-            return "*--"
-        if style == "aggregation":
-            return "o--"
-        if style == "dashed":
-            return ".[#888888].>"
-        # assoc: navigable arrow
-        return "-->"
+    opts: list[str] = []
+    if color:
+        opts.append(color)
+    if highlight:
+        opts.append("thickness=2")
+    bracket = f"[{','.join(opts)}]" if opts else ""
+
+    if style == "dashed":
+        return f"..{direction}{bracket}.>" if direction else f"..{bracket}.>"
 
     if style == "gen":
-        return f"-{direction}-|>"
+        return f"-{direction}{bracket}-|>"
     if style == "composition":
-        return f"*-{direction}-"
+        return f"*-{direction}{bracket}-"
     if style == "aggregation":
-        return f"o-{direction}-"
-    if style == "dashed":
-        return f".[#888888].{direction}.>"
-    return f"-{direction}->"
+        return f"o-{direction}{bracket}-"
+    # assoc
+    return f"-{direction}{bracket}->"
 
 
 # Node info helper
@@ -302,8 +357,12 @@ class OntoUMLPlantUMLRenderer:
         ungrouped.sort(key=lambda nd: layout.depth.get(nd[0], 0))
         for nid, node_data in ungrouped:
             alias, display, stereotype = node_info[nid]
-            color = get_color_for_class(stereotype, node_data.get("nature", ""))
-            lines.append(f'class "{display}" as {alias} <<{stereotype}>> {color}')
+            base_color = get_color_for_class(stereotype, node_data.get("nature", ""))
+            if _is_highlighted(node_data):
+                color_spec = _node_highlight_spec(base_color, node_data)
+                lines.append(f'class "<b>{display}</b>" as {alias} <<{stereotype}>> {color_spec}')
+            else:
+                lines.append(f'class "{display}" as {alias} <<{stereotype}>> {base_color}')
 
         lines.append("")
         self._render_edges(graph, layout, lines)
@@ -349,8 +408,13 @@ class OntoUMLPlantUMLRenderer:
             lines.append("together {")
             for child in children:
                 alias, display, stereotype = node_info[child]
-                color = get_color_for_class(stereotype, graph.nodes[child].get("nature", ""))
-                lines.append(f'  class "{display}" as {alias} <<{stereotype}>> {color}')
+                node_data = graph.nodes[child]
+                base_color = get_color_for_class(stereotype, node_data.get("nature", ""))
+                if _is_highlighted(node_data):
+                    color_spec = _node_highlight_spec(base_color, node_data)
+                    lines.append(f'  class "<b>{display}</b>" as {alias} <<{stereotype}>> {color_spec}')
+                else:
+                    lines.append(f'  class "{display}" as {alias} <<{stereotype}>> {base_color}')
                 grouped.add(child)
             lines.append("}")
             lines.append("")
@@ -370,10 +434,12 @@ class OntoUMLPlantUMLRenderer:
             etype = d.get("type", "")
             etype_lower = etype.lower()
             is_self = src == tgt
+            edge_color = _get_highlight_line_color(d)
+            edge_highlighted = _is_highlighted(d)
 
             if etype_lower == "generalization":
                 direction = _gen_direction(layout, u, v)
-                arrow = _make_arrow(direction, "gen")
+                arrow = _make_arrow(direction, "gen", edge_color, edge_highlighted)
                 meta = _gen_meta_from_lists(
                     d.get("genset_names", []),
                     d.get("genset_is_disjoint", []),
@@ -387,9 +453,9 @@ class OntoUMLPlantUMLRenderer:
                 # Choose diamond type: hollow for memberOf/subCollectionOf,
                 # filled for componentOf/subQuantityOf
                 if etype_lower in _HOLLOW_DIAMOND_STEREOTYPES:
-                    arrow = _make_arrow(direction, "aggregation")
+                    arrow = _make_arrow(direction, "aggregation", edge_color, edge_highlighted)
                 else:
-                    arrow = _make_arrow(direction, "composition")
+                    arrow = _make_arrow(direction, "composition", edge_color, edge_highlighted)
                 left = f'"{d.get("cardinality_target", "")}" ' if d.get("cardinality_target") else ""
                 right = f' "{d.get("cardinality_source", "")}"' if d.get("cardinality_source") else ""
                 lines.append(
@@ -402,7 +468,7 @@ class OntoUMLPlantUMLRenderer:
                 # shared -> hollow diamond (o--).
                 agg = d["aggregation_kind"]
                 direction = _partwhole_direction(layout, u, v, is_self)
-                arrow = _make_arrow(direction, "composition" if agg == AggregationKind.COMPOSITE else "aggregation")
+                arrow = _make_arrow(direction, "composition" if agg == AggregationKind.COMPOSITE else "aggregation", edge_color, edge_highlighted)
                 left = f'"{d.get("cardinality_target", "")}" ' if d.get("cardinality_target") else ""
                 right = f' "{d.get("cardinality_source", "")}"' if d.get("cardinality_source") else ""
                 label = f" : {d['name']}" if d.get("name") else ""
@@ -411,14 +477,14 @@ class OntoUMLPlantUMLRenderer:
             elif etype_lower in _DASHED_STEREOTYPES_LOWER:
                 # derivation: dashed line from material relation to relator class
                 direction = _assoc_direction(layout, u, v, is_self)
-                arrow = _make_arrow(direction, "dashed")
+                arrow = _make_arrow(direction, "dashed", edge_color, edge_highlighted)
                 lines.append(
                     f"{src} {arrow} {tgt} : \u00AB{etype}\u00BB"
                 )
 
             elif etype_lower in _RELATION_STEREOTYPES_LOWER:
                 direction = _assoc_direction(layout, u, v, is_self)
-                arrow = _make_arrow(direction, "assoc")
+                arrow = _make_arrow(direction, "assoc", edge_color, edge_highlighted)
                 left = f'"{d.get("cardinality_source", "")}" ' if d.get("cardinality_source") else ""
                 right = f' "{d.get("cardinality_target", "")}"' if d.get("cardinality_target") else ""
                 label = f" : \u00AB{etype}\u00BB" if etype_lower != "relation" else ""
@@ -426,7 +492,7 @@ class OntoUMLPlantUMLRenderer:
 
             else:
                 direction = _assoc_direction(layout, u, v, is_self)
-                arrow = _make_arrow(direction, "assoc")
+                arrow = _make_arrow(direction, "assoc", edge_color, edge_highlighted)
                 left = f'"{d.get("cardinality_source", "")}" ' if d.get("cardinality_source") else ""
                 right = f' "{d.get("cardinality_target", "")}"' if d.get("cardinality_target") else ""
                 label = f" : {etype}" if etype else ""

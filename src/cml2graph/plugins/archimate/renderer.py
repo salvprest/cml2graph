@@ -10,6 +10,30 @@ from .utils.types import ELEMENT_LAYER, RELATIONSHIP_TYPES
 
 _NON_ALNUM = re.compile(r"[^A-Za-z0-9_]")
 
+_DEFAULT_HIGHLIGHT_COLOR = "#FF4444"
+
+
+def _get_highlight_color(data: dict) -> str:
+    """Return the fill highlight color if present, else ``''``."""
+    if data.get("highlight"):
+        return data.get("highlight_color", "")
+    return ""
+
+
+def _get_highlight_line_color(data: dict) -> str:
+    """Return the line highlight color if present, else ``''``.
+
+    Only uses ``highlight_line_color`` — does NOT fall back to ``highlight_color``
+    (that is for fill only).
+    """
+    if not data.get("highlight"):
+        return ""
+    return data.get("highlight_line_color", "")
+
+
+def _is_highlighted(data: dict) -> bool:
+    return bool(data.get("highlight"))
+
 
 def _clean_id(node_id: str | int) -> str:
     """Create a PlantUML-safe alias from any node id.
@@ -142,17 +166,21 @@ class ArchiMatePlantUMLRenderer:
             # Guarantee a non-empty label; fall back to the alias so PlantUML
             # never sees `archimate "" as n0` which confuses the parser.
             label = _node_label(ntype, display_name) or display_name or alias
+            highlight_color = _get_highlight_color(attr)
+            highlighted = _is_highlighted(attr)
 
-            if macro:
+            if macro and not highlighted:
                 # Real ArchiMate element — use the stdlib macro
                 node_lines.append(f'{macro}({alias}, "{label}")')
             else:
-                # Unknown/typeless node: use the `archimate` keyword.
-                # Unlike `rectangle`, it:
-                #   - does NOT require !include <archimate/Archimate>
-                #   - forces correct diagram-type detection (not activity)
-                #   - supports --> arrows without ambiguity
-                node_lines.append(f'archimate #LightGray "{label}" as {alias}')
+                # Unknown/typeless node OR highlighted node: use the `archimate`
+                # keyword so we can specify the fill colour directly.
+                color = highlight_color if highlight_color else "#LightGray"
+                label_content = f'"<b>{label}</b>"' if highlighted else f'"{label}"'
+                if highlighted:
+                    node_lines.append(f'archimate {color} {label_content} as {alias} ##[bold]')
+                else:
+                    node_lines.append(f'archimate {color} {label_content} as {alias}')
                 fallback_aliases.add(alias)
 
         # Edges
@@ -165,15 +193,23 @@ class ArchiMatePlantUMLRenderer:
                 edge_lines.append(f"' WARNING: dangling edge ({u} -> {v})")
                 continue
 
+            edge_highlight_color = _get_highlight_line_color(attr)
+            edge_highlighted = _is_highlighted(attr)
             uses_fallback = src in fallback_aliases or tgt in fallback_aliases
-            if rtype in RELATIONSHIP_TYPES and not uses_fallback:
+            if rtype in RELATIONSHIP_TYPES and not uses_fallback and not edge_highlighted:
                 # Both endpoints are proper ArchiMate macro elements
                 edge_lines.append(f'Rel_{rtype}({src}, {tgt})')
             else:
-                # At least one endpoint is an `archimate` fallback node —
-                # use a plain arrow (Rel_* macros only work with stdlib elements)
+                # Highlighted edge, fallback node endpoint, or unknown type
                 label_suffix = f": {rtype}" if rtype else ""
-                edge_lines.append(f'{src} --> {tgt}{label_suffix}')
+                if edge_highlighted:
+                    opts: list[str] = []
+                    if edge_highlight_color:
+                        opts.append(edge_highlight_color)
+                    opts.append("thickness=4")
+                    edge_lines.append(f'{src} -[{",".join(opts)}]-> {tgt}{label_suffix}')
+                else:
+                    edge_lines.append(f'{src} --> {tgt}{label_suffix}')
 
         # Include the ArchiMate stdlib only when real macro elements are present;
         # it causes a fatal parse error on recent PlantUML builds when no macro

@@ -2,7 +2,7 @@ from collections import Counter
 
 import networkx as nx
 
-from cml2graph.core.prompts import summarize_graph
+from cml2graph.core.prompts import summarize_graph_stat_string
 
 from .utils.types import (
     CLASS_STEREOTYPES,
@@ -354,7 +354,7 @@ def build_prompt_context(graph: nx.MultiDiGraph) -> dict[str, str]:
         "stereotype_distribution": _summarize_stereotypes(graph),
         "relation_distribution": _summarize_relations(graph),
         "stereotype_categories": _format_stereotype_categories(),
-        "graph_summary": summarize_graph(graph),
+        "graph_summary": summarize_graph_stat_string(graph),
         "category_distribution": _summarize_categories(graph),
         "nature_distribution": _summarize_natures(graph),
         "generalization_summary": _summarize_generalizations(graph),

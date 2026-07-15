@@ -2,7 +2,7 @@ from collections import Counter
 
 import networkx as nx
 
-from cml2graph.core.prompts import summarize_graph
+from cml2graph.core.prompts import summarize_graph_stat_string
 
 from .utils.types import ELEMENT_LAYER, RELATIONSHIP_TYPES
 
@@ -194,7 +194,7 @@ def build_prompt_context(graph: nx.MultiDiGraph) -> dict[str, str]:
         "layer_elements": _format_layer_elements(),
         "element_types": ", ".join(_ELEMENT_TYPES),
         "relationship_types": ", ".join(_RELATIONSHIP_TYPES),
-        "graph_summary": summarize_graph(graph),
+        "graph_summary": summarize_graph_stat_string(graph),
         "layer_distribution": _summarize_layers(graph),
         "element_type_distribution": _summarize_element_types(graph),
         "relationship_distribution": _summarize_relationships(graph),
